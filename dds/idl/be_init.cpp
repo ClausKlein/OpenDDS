@@ -60,7 +60,7 @@ BE_post_init(char*[], long)
   }
   be_global->add_inc_path(include_dds.c_str());
   ACE_CString included;
-  DRV_add_include_path(included, include_dds.c_str(), 0, true);
+  DRV_add_include_path(included, include_dds.c_str(), nullptr, true);
 
   DRV_cpp_putarg("-D__OPENDDS_IDL_HAS_ANNOTATIONS");
   be_global->builtin_annotations_.register_all();

@@ -87,7 +87,7 @@ to_long(const AST_Expression::AST_ExprValue& ev)
 }
 
 struct Printer {
-  virtual ~Printer() {}
+  virtual ~Printer() = default;
   virtual std::ostream& print_on(std::ostream& out) const = 0;
 };
 
@@ -108,7 +108,7 @@ template <typename T>
 struct UintPrinter : ValuePrinter<T> {
   explicit UintPrinter(const T& a_value) : ValuePrinter<T>(a_value) {}
 
-  std::ostream& print_on(std::ostream& out) const
+  std::ostream& print_on(std::ostream& out) const override
   {
     return out << static_cast<unsigned int>(this->value);
   }
@@ -128,7 +128,7 @@ struct EquivalenceKindPrinter : ValuePrinter<OpenDDS::XTypes::EquivalenceKind> {
   explicit EquivalenceKindPrinter(const OpenDDS::XTypes::EquivalenceKind a_value)
   : ValuePrinter<OpenDDS::XTypes::EquivalenceKind>(a_value) {}
 
-  std::ostream& print_on(std::ostream& out) const
+  std::ostream& print_on(std::ostream& out) const override
   {
     switch (this->value) {
     case OpenDDS::XTypes::EK_MINIMAL:
@@ -143,10 +143,10 @@ struct EquivalenceKindPrinter : ValuePrinter<OpenDDS::XTypes::EquivalenceKind> {
 };
 
 struct BitmaskPrintHelper {
-  explicit BitmaskPrintHelper(std::ostream& os) : os_(os), first_(true) {}
+  explicit BitmaskPrintHelper(std::ostream& os) : os_(os) {}
 
   std::ostream& os_;
-  bool first_;
+  bool first_{true};
 
   BitmaskPrintHelper& operator<<(const char* str)
   {
@@ -171,7 +171,7 @@ struct MemberFlagPrinter : ValuePrinter<OpenDDS::XTypes::MemberFlag> {
   explicit MemberFlagPrinter(const OpenDDS::XTypes::MemberFlag a_value)
   : ValuePrinter<OpenDDS::XTypes::MemberFlag>(a_value) {}
 
-  std::ostream& print_on(std::ostream& out) const
+  std::ostream& print_on(std::ostream& out) const override
   {
     BitmaskPrintHelper bph(out);
     if (this->value & OpenDDS::XTypes::TRY_CONSTRUCT1) {
@@ -227,7 +227,7 @@ struct TypeFlagPrinter : ValuePrinter<OpenDDS::XTypes::TypeFlag> {
   explicit TypeFlagPrinter(const OpenDDS::XTypes::TypeFlag a_value)
   : ValuePrinter<OpenDDS::XTypes::TypeFlag>(a_value) {}
 
-  std::ostream& print_on(std::ostream& out) const
+  std::ostream& print_on(std::ostream& out) const override
   {
     BitmaskPrintHelper bph(out);
     if (this->value & OpenDDS::XTypes::IS_FINAL) {
@@ -286,8 +286,8 @@ std::ostream&
 operator<<(std::ostream& out, const OpenDDS::XTypes::SBoundSeq& seq)
 {
   out << "XTypes::SBoundSeq()";
-  for (OpenDDS::XTypes::SBoundSeq::const_iterator pos = seq.begin(), limit = seq.end(); pos != limit; ++pos) {
-    out << ".append(" << SBoundPrinter(*pos) << ")";
+  for (unsigned char pos : seq) {
+    out << ".append(" << SBoundPrinter(pos) << ")";
   }
   return out;
 }
@@ -296,8 +296,8 @@ std::ostream&
 operator<<(std::ostream& out, const OpenDDS::XTypes::LBoundSeq& seq)
 {
   out << "XTypes::LBoundSeq()";
-  for (OpenDDS::XTypes::LBoundSeq::const_iterator pos = seq.begin(), limit = seq.end(); pos != limit; ++pos) {
-    out << ".append(" << LBoundPrinter(*pos) << ")";
+  for (unsigned int pos : seq) {
+    out << ".append(" << LBoundPrinter(pos) << ")";
   }
   return out;
 }
@@ -584,7 +584,7 @@ typeobject_generator::gen_epilogue()
     "namespace {\n";
 
   size_t idx = 0;
-  for (OpenDDS::XTypes::TypeMap::const_iterator pos = minimal_type_map_.begin();
+  for (auto pos = minimal_type_map_.begin();
        pos != minimal_type_map_.end(); ++pos, ++idx) {
     be_global->impl_ <<
       "XTypes::TypeObject OPENDDS_IDL_FILE_SPECIFIC(minimal_to, " << idx << ")()\n"
@@ -608,7 +608,7 @@ typeobject_generator::gen_epilogue()
     "  XTypes::TypeMap tm;\n";
 
   idx = 0;
-  for (OpenDDS::XTypes::TypeMap::const_iterator pos = minimal_type_map_.begin();
+  for (auto pos = minimal_type_map_.begin();
        pos != minimal_type_map_.end(); ++pos, ++idx) {
     be_global->impl_ << "  tm[" << pos->first << "] = OPENDDS_IDL_FILE_SPECIFIC(minimal_to, " << idx << ")();\n";
   }
@@ -619,7 +619,7 @@ typeobject_generator::gen_epilogue()
 
   if (produce_xtypes_complete_) {
     idx = 0;
-    for (OpenDDS::XTypes::TypeMap::const_iterator pos = complete_type_map_.begin();
+    for (auto pos = complete_type_map_.begin();
          pos != complete_type_map_.end(); ++pos, ++idx) {
       be_global->impl_ <<
         "XTypes::TypeObject OPENDDS_IDL_FILE_SPECIFIC(complete_to, " << idx << ")()\n"
@@ -643,7 +643,7 @@ typeobject_generator::gen_epilogue()
       "  XTypes::TypeMap tm;\n";
 
     idx = 0;
-    for (OpenDDS::XTypes::TypeMap::const_iterator pos = complete_type_map_.begin();
+    for (auto pos = complete_type_map_.begin();
          pos != complete_type_map_.end(); ++pos, ++idx) {
       be_global->impl_ << "  tm[" << pos->first << "] = OPENDDS_IDL_FILE_SPECIFIC(complete_to, " << idx << ")();\n";
     }
@@ -717,13 +717,13 @@ typeobject_generator::consider(Element& v, AST_Type* type, const std::string& an
   switch (type->node_type()) {
   case AST_ConcreteType::NT_union_fwd:
     {
-      AST_UnionFwd* const n = dynamic_cast<AST_UnionFwd*>(type);
+      auto* const n = dynamic_cast<AST_UnionFwd*>(type);
       type = n->full_definition();
       break;
     }
   case AST_ConcreteType::NT_struct_fwd:
     {
-      AST_StructureFwd* const n = dynamic_cast<AST_StructureFwd*>(type);
+      auto* const n = dynamic_cast<AST_StructureFwd*>(type);
       type = n->full_definition();
       break;
     }
@@ -745,13 +745,13 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
   switch (type->node_type()) {
   case AST_ConcreteType::NT_union_fwd:
     {
-      AST_UnionFwd* const n = dynamic_cast<AST_UnionFwd*>(type);
+      auto* const n = dynamic_cast<AST_UnionFwd*>(type);
       type = n->full_definition();
       break;
     }
   case AST_ConcreteType::NT_struct_fwd:
     {
-      AST_StructureFwd* const n = dynamic_cast<AST_StructureFwd*>(type);
+      auto* const n = dynamic_cast<AST_StructureFwd*>(type);
       type = n->full_definition();
       break;
     }
@@ -768,12 +768,12 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
   v.on_stack = true;
 
   using OpenDDS::XTypes::MemberId;
-  AST_Structure* const stru = dynamic_cast<AST_Structure*>(type);
+  auto* const stru = dynamic_cast<AST_Structure*>(type);
   switch (type->node_type()) {
 
   case AST_ConcreteType::NT_union:
     {
-      AST_Union* const n = dynamic_cast<AST_Union*>(type);
+      auto* const n = dynamic_cast<AST_Union*>(type);
       v.name = canonical_name(n->name());
 
       AST_Type* discriminator = n->disc_type();
@@ -784,8 +784,8 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
       const AutoidKind auto_id = be_global->autoid(n);
       MemberId member_id = 0;
 
-      for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-        AST_UnionBranch* ub = dynamic_cast<AST_UnionBranch*>(*i);
+      for (auto field : fields) {
+        auto* ub = dynamic_cast<AST_UnionBranch*>(field);
         const MemberId id = be_global->compute_id(stru, ub, auto_id, member_id);
         consider(v, ub->field_type(), v.name + "." + OpenDDS::DCPS::to_dds_string(id));
       }
@@ -795,7 +795,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
   case AST_ConcreteType::NT_struct:
     {
-      AST_Structure* const n = dynamic_cast<AST_Structure*>(type);
+      auto* const n = dynamic_cast<AST_Structure*>(type);
       v.name = canonical_name(n->name());
 
       // TODO: Struct inheritance.
@@ -804,8 +804,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
       const AutoidKind auto_id = be_global->autoid(n);
       MemberId member_id = 0;
 
-      for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-        AST_Field* field = *i;
+      for (auto field : fields) {
         const MemberId id = be_global->compute_id(stru, field, auto_id, member_id);
         consider(v, field->field_type(), v.name + "." + OpenDDS::DCPS::to_dds_string(id));
       }
@@ -815,7 +814,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
   case AST_ConcreteType::NT_array:
     {
-      AST_Array* const n = dynamic_cast<AST_Array*>(type);
+      auto* const n = dynamic_cast<AST_Array*>(type);
       v.name = anonymous_name + ".a";
       consider(v, n->base_type(), v.name);
       break;
@@ -823,7 +822,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
   case AST_ConcreteType::NT_sequence:
     {
-      AST_Sequence* const n = dynamic_cast<AST_Sequence*>(type);
+      auto* const n = dynamic_cast<AST_Sequence*>(type);
       v.name = anonymous_name + ".s";
       consider(v, n->base_type(), v.name);
       break;
@@ -831,7 +830,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
   case AST_ConcreteType::NT_typedef:
     {
-      AST_Typedef* const n = dynamic_cast<AST_Typedef*>(type);
+      auto* const n = dynamic_cast<AST_Typedef*>(type);
       v.name = canonical_name(n->name());
       // TODO: What is the member name for an anonymous type in a typedef?
       // 7.3.4.9.2
@@ -841,7 +840,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
   case AST_ConcreteType::NT_enum:
     {
-      AST_Enum* const n = dynamic_cast<AST_Enum*>(type);
+      auto* const n = dynamic_cast<AST_Enum*>(type);
       v.name = canonical_name(n->name());
       break;
     }
@@ -921,7 +920,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
       {
         size_t idx = 0;
-        for (List::const_iterator pos = scc.begin(); pos != scc.end(); ++pos) {
+        for (auto pos = scc.begin(); pos != scc.end(); ++pos) {
           minimal_ti.sc_component_id().scc_index = static_cast<int>(++idx); // Starts at 1.
           complete_ti.sc_component_id().scc_index = minimal_ti.sc_component_id().scc_index;
           const TypeIdentifierPair ti_pair = {minimal_ti, complete_ti};
@@ -931,7 +930,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
       // Construct temporary type objects from the temporary type identifiers.
       OpenDDS::XTypes::TypeObjectSeq minimal_seq, complete_seq;
-      for (List::const_iterator pos = scc.begin(); pos != scc.end(); ++pos) {
+      for (auto pos = scc.begin(); pos != scc.end(); ++pos) {
         generate_type_identifier(pos->type, true);
         OPENDDS_ASSERT(type_object_map_.count(pos->type) != 0);
         minimal_seq.append(type_object_map_[pos->type].minimal);
@@ -966,7 +965,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
 
       {
         size_t idx = 0;
-        for (List::const_iterator pos = scc.begin(); pos != scc.end(); ++pos) {
+        for (auto pos = scc.begin(); pos != scc.end(); ++pos) {
           minimal_ti.sc_component_id().scc_index = static_cast<int>(++idx);
           complete_ti.sc_component_id().scc_index = minimal_ti.sc_component_id().scc_index;
           const TypeIdentifierPair ti_pair = {minimal_ti, complete_ti};
@@ -975,7 +974,7 @@ typeobject_generator::strong_connect(AST_Type* type, const std::string& anonymou
       }
 
       // Compute the final type objects with the final type identifiers.
-      for (List::const_iterator pos = scc.begin(); pos != scc.end(); ++pos) {
+      for (auto pos = scc.begin(); pos != scc.end(); ++pos) {
         generate_type_identifier(pos->type, true);
         const OpenDDS::XTypes::TypeIdentifier& minimal_ti = hash_type_identifier_map_[pos->type].minimal;
         const OpenDDS::XTypes::TypeIdentifier& complete_ti = hash_type_identifier_map_[pos->type].complete;
@@ -1028,7 +1027,7 @@ void typeobject_generator::set_builtin_member_annotations(AST_Decl* member,
 void
 typeobject_generator::generate_struct_type_identifier(AST_Type* type)
 {
-  AST_Structure* const n = dynamic_cast<AST_Structure*>(type);
+  auto* const n = dynamic_cast<AST_Structure*>(type);
   const Fields fields(n);
 
   const ExtensibilityKind exten = be_global->extensibility(n);
@@ -1059,8 +1058,7 @@ typeobject_generator::generate_struct_type_identifier(AST_Type* type)
   complete_to.complete.struct_type.header.detail.type_name = canonical_name(type->name());
   // @verbatim and custom annotations are not supported.
 
-  for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-    AST_Field* field = *i;
+  for (auto field : fields) {
     const TryConstructFailAction trycon = be_global->try_construct(field);
 
     OpenDDS::XTypes::MinimalStructMember minimal_member;
@@ -1110,7 +1108,7 @@ typeobject_generator::generate_struct_type_identifier(AST_Type* type)
 void
 typeobject_generator::generate_union_type_identifier(AST_Type* type)
 {
-  AST_Union* const n = dynamic_cast<AST_Union*>(type);
+  auto* const n = dynamic_cast<AST_Union*>(type);
   AST_Type* discriminator = n->disc_type();
   const Fields fields(n);
 
@@ -1147,8 +1145,8 @@ typeobject_generator::generate_union_type_identifier(AST_Type* type)
     minimal_to.minimal.union_type.discriminator.common.member_flags;
   complete_to.complete.union_type.discriminator.common.type_id = get_complete_type_identifier(discriminator);
 
-  for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-    AST_UnionBranch* branch = dynamic_cast<AST_UnionBranch*>(*i);
+  for (auto field : fields) {
+    auto* branch = dynamic_cast<AST_UnionBranch*>(field);
     const TryConstructFailAction trycon = be_global->try_construct(branch);
 
     bool is_default = false;
@@ -1209,7 +1207,7 @@ typeobject_generator::generate_union_type_identifier(AST_Type* type)
 void
 typeobject_generator::generate_enum_type_identifier(AST_Type* type)
 {
-  AST_Enum* const n = dynamic_cast<AST_Enum*>(type);
+  auto* const n = dynamic_cast<AST_Enum*>(type);
   std::vector<AST_EnumVal*> contents;
   scope2vector(contents, n, AST_Decl::NT_enum_val);
   bool has_extensibility_annotation = false;
@@ -1267,7 +1265,7 @@ typeobject_generator::generate_enum_type_identifier(AST_Type* type)
 void
 typeobject_generator::generate_array_type_identifier(AST_Type* type, bool force_type_object)
 {
-  AST_Array* const n = dynamic_cast<AST_Array*>(type);
+  auto* const n = dynamic_cast<AST_Array*>(type);
 
   const TryConstructFailAction trycon = be_global->try_construct(n->base_type());
   OpenDDS::XTypes::CollectionElementFlag cef = try_construct_to_member_flag(trycon);
@@ -1356,7 +1354,7 @@ typeobject_generator::generate_array_type_identifier(AST_Type* type, bool force_
 void
 typeobject_generator::generate_sequence_type_identifier(AST_Type* type, bool force_type_object)
 {
-  AST_Sequence* const n = dynamic_cast<AST_Sequence*>(type);
+  auto* const n = dynamic_cast<AST_Sequence*>(type);
 
   ACE_CDR::ULong bound = 0;
   if (!n->unbounded()) {
@@ -1436,7 +1434,7 @@ typeobject_generator::generate_sequence_type_identifier(AST_Type* type, bool for
 void
 typeobject_generator::generate_alias_type_identifier(AST_Type* type)
 {
-  AST_Typedef* const n = dynamic_cast<AST_Typedef*>(type);
+  auto* const n = dynamic_cast<AST_Typedef*>(type);
 
   OpenDDS::XTypes::TypeObject minimal_to, complete_to;
   minimal_to.kind = OpenDDS::XTypes::EK_MINIMAL;
@@ -1454,7 +1452,7 @@ typeobject_generator::generate_alias_type_identifier(AST_Type* type)
 void
 typeobject_generator::generate_primitive_type_identifier(AST_Type* type)
 {
-  AST_PredefinedType* const n = dynamic_cast<AST_PredefinedType*>(type);
+  auto* const n = dynamic_cast<AST_PredefinedType*>(type);
   switch (n->pt()) {
   case AST_PredefinedType::PT_long:
     fully_desc_type_identifier_map_[type] = OpenDDS::XTypes::TypeIdentifier(OpenDDS::XTypes::TK_INT32);
@@ -1539,7 +1537,7 @@ typeobject_generator::generate_type_identifier(AST_Type* type, bool force_type_o
 
   case AST_ConcreteType::NT_string:
     {
-      AST_String* const n = dynamic_cast<AST_String*>(type);
+      auto* const n = dynamic_cast<AST_String*>(type);
       ACE_CDR::ULong bound = n->max_size()->ev()->u.ulval;
       if (bound < 256) {
         OpenDDS::XTypes::TypeIdentifier ti(OpenDDS::XTypes::TI_STRING8_SMALL);
@@ -1555,7 +1553,7 @@ typeobject_generator::generate_type_identifier(AST_Type* type, bool force_type_o
 
   case AST_ConcreteType::NT_wstring:
     {
-      AST_String* const n = dynamic_cast<AST_String*>(type);
+      auto* const n = dynamic_cast<AST_String*>(type);
       ACE_CDR::ULong bound = n->max_size()->ev()->u.ulval;
       if (bound < 256) {
         OpenDDS::XTypes::TypeIdentifier ti(OpenDDS::XTypes::TI_STRING16_SMALL);
@@ -1654,12 +1652,12 @@ typeobject_generator::get_minimal_type_identifier(AST_Type* type)
   switch(type->node_type()) {
   case AST_Decl::NT_union_fwd:
     {
-      AST_UnionFwd* const td = dynamic_cast<AST_UnionFwd*>(type);
+      auto* const td = dynamic_cast<AST_UnionFwd*>(type);
       return get_minimal_type_identifier(td->full_definition());
     }
   case AST_Decl::NT_struct_fwd:
     {
-      AST_StructureFwd* const td = dynamic_cast<AST_StructureFwd*>(type);
+      auto* const td = dynamic_cast<AST_StructureFwd*>(type);
       return get_minimal_type_identifier(td->full_definition());
     }
   default:
@@ -1670,7 +1668,7 @@ typeobject_generator::get_minimal_type_identifier(AST_Type* type)
     return fully_desc_type_identifier_map_[type];
   }
 
-  HashTypeIdentifierMap::const_iterator pos = hash_type_identifier_map_.find(type);
+  auto pos = hash_type_identifier_map_.find(type);
   OPENDDS_ASSERT(pos != hash_type_identifier_map_.end());
   return pos->second.minimal;
 }
@@ -1682,12 +1680,12 @@ typeobject_generator::get_complete_type_identifier(AST_Type* type)
   switch(type->node_type()) {
   case AST_Decl::NT_union_fwd:
     {
-      AST_UnionFwd* const td = dynamic_cast<AST_UnionFwd*>(type);
+      auto* const td = dynamic_cast<AST_UnionFwd*>(type);
       return get_complete_type_identifier(td->full_definition());
     }
   case AST_Decl::NT_struct_fwd:
     {
-      AST_StructureFwd* const td = dynamic_cast<AST_StructureFwd*>(type);
+      auto* const td = dynamic_cast<AST_StructureFwd*>(type);
       return get_complete_type_identifier(td->full_definition());
     }
   default:
@@ -1698,7 +1696,7 @@ typeobject_generator::get_complete_type_identifier(AST_Type* type)
     return fully_desc_type_identifier_map_[type];
   }
 
-  HashTypeIdentifierMap::const_iterator pos = hash_type_identifier_map_.find(type);
+  auto pos = hash_type_identifier_map_.find(type);
   OPENDDS_ASSERT(pos != hash_type_identifier_map_.end());
   return pos->second.complete;
 }

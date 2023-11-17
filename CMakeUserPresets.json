@@ -1,0 +1,94 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "debug",
+            "displayName": "Debug user Config",
+            "description": "Build using Ninja generator",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "installDir": "${sourceDir}/stagedir",
+            "cacheVariables": {
+                "CMAKE_PREFIX_PATH": {
+                    "type": "path",
+                    "value": "${sourceDir}/stagedir"
+                },
+                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_CXX_EXTENSIONS": false,
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_UNITY_BUILD": true,
+                "BUILD_SHARED_LIBS": false,
+                "OPENDDS_BUILD_TESTS": true,
+                "OPENDDS_SECURITY": false,
+                "OPENDDS_SAFETY_PROFILE": false,
+                "OPENDDS_VERSIONED_NAMEPSACE": false
+            },
+            "environment": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+                "CPM_USE_LOCAL_PACKAGES": "NO",
+                "CPM_SOURCE_CACHE": "$env{HOME}/.cache/CPM",
+                "PATH": "$env{HOME}/.local/bin${pathListSep}$penv{PATH}"
+            },
+            "warnings": {
+                "deprecated": true,
+                "uninitialized": true
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": true
+            }
+        }
+    ],
+    "packagePresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "generators": [
+                "TGZ"
+            ]
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "debug",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "debug"
+                },
+                {
+                    "type": "build",
+                    "name": "debug"
+                },
+                {
+                    "type": "test",
+                    "name": "debug"
+                },
+                {
+                    "type": "package",
+                    "name": "debug"
+                }
+            ]
+        }
+    ]
+}

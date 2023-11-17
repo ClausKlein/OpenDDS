@@ -16,7 +16,7 @@ RtpsCustomizedElement::RtpsCustomizedElement(TransportQueueElement* orig,
   : TransportCustomizedElement(orig)
 {
   set_requires_exclusive();
-  set_msg(move(msg));
+  set_msg(std::move(msg));
 }
 
 ACE_INLINE

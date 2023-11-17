@@ -11,6 +11,7 @@
 #include <ast_array.h>
 
 #include <string>
+#include <utility>
 
 TopicKeys::RootType TopicKeys::root_type(AST_Type* type)
 {
@@ -37,19 +38,18 @@ TopicKeys::RootType TopicKeys::root_type(AST_Type* type)
 }
 
 TopicKeys::Error::Error()
-  : node_(0)
+  : node_(nullptr)
 {
 }
 
-TopicKeys::Error::Error(AST_Decl* node, const std::string& message)
+TopicKeys::Error::Error(AST_Decl* node, std::string  message)
   : node_(node)
-  , message_(message)
+  , message_(std::move(message))
 {
 }
 
-TopicKeys::Error::~Error() throw ()
-{
-}
+TopicKeys::Error::~Error() noexcept
+= default;
 
 TopicKeys::Error& TopicKeys::Error::operator=(const TopicKeys::Error& error)
 {
@@ -58,7 +58,7 @@ TopicKeys::Error& TopicKeys::Error::operator=(const TopicKeys::Error& error)
   return *this;
 }
 
-const char* TopicKeys::Error::what() const throw()
+const char* TopicKeys::Error::what() const noexcept
 {
   return message_.c_str();
 }
@@ -68,11 +68,11 @@ AST_Decl* TopicKeys::Error::node() {
 }
 
 TopicKeys::Iterator::Iterator()
-  : parent_(0)
+  : parent_(nullptr)
   , pos_(0)
-  , child_(0)
-  , current_value_(0)
-  , root_(0)
+  , child_(nullptr)
+  , current_value_(nullptr)
+  , root_(nullptr)
   , root_type_(InvalidType)
   , level_(0)
   , recursive_(false)
@@ -82,10 +82,10 @@ TopicKeys::Iterator::Iterator()
 }
 
 TopicKeys::Iterator::Iterator(TopicKeys& parent)
-  : parent_(0)
+  : parent_(nullptr)
   , pos_(0)
-  , child_(0)
-  , current_value_(0)
+  , child_(nullptr)
+  , current_value_(nullptr)
   , level_(0)
   , recursive_(parent.recursive())
   , element_count_(0)
@@ -99,8 +99,8 @@ TopicKeys::Iterator::Iterator(TopicKeys& parent)
 TopicKeys::Iterator::Iterator(AST_Type* root, Iterator* parent)
   : parent_(parent)
   , pos_(0)
-  , child_(0)
-  , current_value_(0)
+  , child_(nullptr)
+  , current_value_(nullptr)
   , level_(parent->level() + 1)
   , recursive_(parent->recursive_)
   , element_count_(0)
@@ -114,8 +114,8 @@ TopicKeys::Iterator::Iterator(AST_Type* root, Iterator* parent)
 TopicKeys::Iterator::Iterator(AST_Field* root, Iterator* parent)
   : parent_(parent)
   , pos_(0)
-  , child_(0)
-  , current_value_(0)
+  , child_(nullptr)
+  , current_value_(nullptr)
   , level_(parent->level() + 1)
   , recursive_(parent->recursive_)
   , element_count_(0)
@@ -133,9 +133,9 @@ TopicKeys::Iterator::Iterator(AST_Field* root, Iterator* parent)
 
 TopicKeys::Iterator::Iterator(const Iterator& other)
   : pos_(0)
-  , child_(0)
-  , current_value_(0)
-  , root_(0)
+  , child_(nullptr)
+  , current_value_(nullptr)
+  , root_(nullptr)
   , root_type_(InvalidType)
   , level_(0)
   , recursive_(false)
@@ -161,7 +161,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator=(const TopicKeys::Iterator& o
   level_ = other.level_;
   recursive_ = other.recursive_;
   dimensions_ = other.dimensions_;
-  child_ = other.child_ ? new Iterator(*other.child_) : 0;
+  child_ = other.child_ ? new Iterator(*other.child_) : nullptr;
   element_count_ = other.element_count_;
   return *this;
 }
@@ -179,7 +179,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator++()
     ++child;
     if (child == end_value()) {
       delete child_;
-      child_ = 0;
+      child_ = nullptr;
       pos_++;
     } else {
       current_value_ = *child;
@@ -190,7 +190,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator++()
   if (root_type_ == StructureType) {
     // If we are recursive and at a structure, look for key fields
     if (recursive_ || level_ == 0) {
-      AST_Structure* struct_root = dynamic_cast<AST_Structure*>(root_);
+      auto* struct_root = dynamic_cast<AST_Structure*>(root_);
       if (!struct_root) {
         throw Error(root_, "Invalid Key Iterator");
       }
@@ -223,7 +223,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator++()
           Iterator& child = *child_;
           if (child == end_value()) {
             delete child_;
-            child_ = 0;
+            child_ = nullptr;
             throw Error(*i, std::string("field is ") + (implied_key ? "implicitly" : "explicitly") +
               " marked as key, but does not contain any keys.");
           } else {
@@ -241,7 +241,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator++()
 
   // If we are an array, use the base type and repeat for every element
   } else if (root_type_ == ArrayType) {
-    AST_Array* array_node = dynamic_cast<AST_Array*>(root_);
+    auto* array_node = dynamic_cast<AST_Array*>(root_);
     if (!array_node) {
       throw Error(root_, "Invalid Key Iterator");
     }
@@ -261,7 +261,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator++()
       Iterator& child = *child_;
       if (child == Iterator()) {
         delete child_;
-        child_ = 0;
+        child_ = nullptr;
         throw Error(array_node, "array type is marked as key, but its base type "
           "does not contain any keys.");
       }
@@ -273,7 +273,7 @@ TopicKeys::Iterator& TopicKeys::Iterator::operator++()
   } else if (root_type_ == UnionType) {
     if (pos_ == 0) { // Only Allow One Iteration
       pos_ = 1;
-      AST_Union* union_node = dynamic_cast<AST_Union*>(root_);
+      auto* union_node = dynamic_cast<AST_Union*>(root_);
       if (level_ > 0 || be_global->union_discriminator_is_key(union_node)) {
         current_value_ = root_;
         return *this;
@@ -350,7 +350,7 @@ void TopicKeys::Iterator::path_i(std::stringstream& ss, bool canonical)
 {
   const char* error_msg = "Can't get path for invalid topic key iterator!";
   if (root_type_ == StructureType) {
-    AST_Structure* struct_root = dynamic_cast<AST_Structure*>(root_);
+    auto* struct_root = dynamic_cast<AST_Structure*>(root_);
     if (!struct_root) {
       throw Error(root_, error_msg);
     }
@@ -375,7 +375,7 @@ void TopicKeys::Iterator::path_i(std::stringstream& ss, bool canonical)
       div = *di;
     }
 
-    std::vector<size_t>::reverse_iterator
+    auto
       ri = results.rbegin(),
       rfinished = results.rend();
     for (; ri != rfinished; ++ri) {
@@ -411,7 +411,7 @@ size_t TopicKeys::Iterator::level() const
 
 AST_Type* TopicKeys::Iterator::get_ast_type() const
 {
-  AST_Field* field = 0;
+  AST_Field* field = nullptr;
   switch (root_type()) {
   case UnionType:
     return dynamic_cast<AST_Type*>(current_value_);
@@ -441,11 +441,11 @@ AST_Type* TopicKeys::Iterator::get_ast_type() const
   default:
     break;
   }
-  return 0;
+  return nullptr;
 }
 
 TopicKeys::TopicKeys()
-  : root_(0),
+  : root_(nullptr),
     root_type_(InvalidType),
     counted_(false),
     count_(0),
@@ -479,18 +479,10 @@ TopicKeys::TopicKeys(AST_Union* root)
 }
 
 TopicKeys::~TopicKeys()
-{
-}
+= default;
 
 TopicKeys& TopicKeys::operator=(const TopicKeys& other)
-{
-  root_ = other.root_;
-  root_type_ = other.root_type_;
-  counted_ = other.counted_;
-  count_ = other.count_;
-  recursive_ = other.recursive_;
-  return *this;
-}
+= default;
 
 TopicKeys::Iterator TopicKeys::begin()
 {

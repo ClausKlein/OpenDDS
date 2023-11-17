@@ -34,19 +34,18 @@ void Annotations::register_all()
 }
 
 Annotations::Annotations()
-{
-}
+= default;
 
 Annotations::~Annotations()
 {
-  for (MapType::iterator i = map_.begin(); i != map_.end(); ++i) {
-    delete i->second;
+  for (auto & i : map_) {
+    delete i.second;
   }
 }
 
 Annotation* Annotations::operator[](const std::string& annotation) const
 {
-  const MapType::const_iterator i = map_.find(annotation);
+  const auto i = map_.find(annotation);
   if (i == map_.end()) {
     be_util::misc_error_and_abort(std::string("No such annotation: ") + annotation);
   }
@@ -54,13 +53,12 @@ Annotation* Annotations::operator[](const std::string& annotation) const
 }
 
 Annotation::Annotation()
-: declaration_(0)
+: declaration_(nullptr)
 {
 }
 
 Annotation::~Annotation()
-{
-}
+= default;
 
 std::string Annotation::module() const
 {
@@ -93,7 +91,7 @@ void Annotation::cache()
 AST_Expression::AST_ExprValue* get_annotation_member_ev(
   AST_Annotation_Appl* appl, const char* member_name, AST_Expression::ExprType type)
 {
-  AST_Annotation_Member* member =
+  auto* member =
     dynamic_cast<AST_Annotation_Member*>((*appl)[member_name]);
   if (member) {
     AST_Expression* e = member->value();
@@ -113,7 +111,7 @@ AST_Expression::AST_ExprValue* get_annotation_member_ev(
                                 member_name + "\" of annotation \"" +
                                 appl->local_name()->get_string() + '"',
                                 appl);
-  return 0;
+  return nullptr;
 }
 
 bool get_bool_annotation_member_value(AST_Annotation_Appl* appl,
@@ -183,8 +181,7 @@ bool KeyAnnotation::union_value(AST_Union* node) const
 // @topic ====================================================================
 
 TopicAnnotation::TopicAnnotation()
-{
-}
+= default;
 
 std::string TopicAnnotation::definition() const
 {
@@ -461,9 +458,8 @@ namespace OpenDDS {
     value = DataRepresentation();
     bool found = false;
     if (node) {
-      for (AST_Annotation_Appls::iterator i = node->annotations().begin();
-          i != node->annotations().end(); ++i) {
-        AST_Annotation_Appl* appl = i->get();
+      for (auto & i : node->annotations()) {
+        AST_Annotation_Appl* appl = i.get();
         if (appl && appl->annotation_decl() == declaration()) {
           found = true;
           value.add(value_from_appl(appl));

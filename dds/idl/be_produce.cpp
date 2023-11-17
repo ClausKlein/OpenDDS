@@ -134,7 +134,7 @@ string to_macro(const char* fn)
 
   msec += ACE_OS::getpid() + (size_t) ACE_OS::thr_self();
 
-  unsigned int seed = static_cast<unsigned int>(msec);
+  auto seed = static_cast<unsigned int>(msec);
 
   if (ret[ret.size() - 1] != '_') ret += '_';
   static const char alphanum[] =
@@ -275,8 +275,8 @@ void postprocess(const char* fn, ostringstream& content,
     // For Unity builds, names in anonymous namespace can clash, so this is used
     // to make namespaces with names based on the file instead.
     std::string prefix = to_macro(fn);
-    for (size_t i = 0; i < prefix.size(); ++i) {
-      prefix[i] = tolower(prefix[i]);
+    for (char & i : prefix) {
+      i = tolower(i);
     }
     out <<
       "\n"
@@ -379,9 +379,9 @@ BE_produce()
   be_global->open_streams(idl_fn);
 
   AST_Decl* d = idl_global->root();
-  AST_Root* root = dynamic_cast<AST_Root*>(d);
+  auto* root = dynamic_cast<AST_Root*>(d);
 
-  if (root == 0) {
+  if (root == nullptr) {
     ACE_ERROR((LM_ERROR,
                ACE_TEXT("(%N:%l) BE_produce - ")
                ACE_TEXT("No Root\n")));

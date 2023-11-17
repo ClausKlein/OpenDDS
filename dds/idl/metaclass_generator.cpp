@@ -171,7 +171,7 @@ namespace {
       be_global->add_include("<cstring>", BE_GlobalData::STREAM_CPP);
     } else if (cls & CL_ARRAY) {
       AST_Type* unTD = resolveActualType(field->field_type());
-      AST_Array* arr = dynamic_cast<AST_Array*>(unTD);
+      auto* arr = dynamic_cast<AST_Array*>(unTD);
       be_global->impl_ <<
         "    if (std::strcmp(field, \"" << idl_name << "\") == 0) {\n"
         "      " << fieldType << "* lhsArr = &static_cast<T*>(lhs)->" << af.name_ << ";\n"
@@ -236,8 +236,8 @@ namespace {
     const std::vector<AST_Field*>& fields, bool& first_struct_,
     const std::string& clazz)
   {
-    AST_Structure* struct_node = 0;
-    AST_Union* union_node = 0;
+    AST_Structure* struct_node = nullptr;
+    AST_Union* union_node = nullptr;
     if (!node || !name) {
       return false;
     }
@@ -267,7 +267,7 @@ namespace {
       << decl << ";\n";
 
     size_t key_count = 0;
-    IDL_GlobalData::DCPS_Data_Type_Info* info = 0;
+    IDL_GlobalData::DCPS_Data_Type_Info* info = nullptr;
     const bool is_topic_type = be_global->is_topic_type(node);
     if (struct_node) {
       info = idl_global->is_dcps_type(name);
@@ -298,9 +298,9 @@ namespace {
         "  ACE_CDR::ULong map_name_to_id(const char* field) const\n"
         "  {\n"
         "    static const std::pair<std::string, ACE_CDR::ULong> name_to_id_pairs[] = {\n";
-      for (size_t i = 0; i < fields.size(); ++i) {
-        be_global->impl_ << "      std::make_pair(\"" << canonical_name(fields[i]) << "\", " <<
-          be_global->get_id(fields[i]) << "),\n";
+      for (auto field : fields) {
+        be_global->impl_ << "      std::make_pair(\"" << canonical_name(field) << "\", " <<
+          be_global->get_id(field) << "),\n";
       }
       be_global->impl_ <<
         "    };\n"
@@ -413,8 +413,7 @@ void generate_anon_fields(AST_Structure* node)
 {
   const Fields fields(node);
   FieldInfo::EleLenSet anonymous_seq_generated;
-  for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-    AST_Field* const field = *i;
+  for (auto field : fields) {
     if (field->field_type()->anonymous()) {
       FieldInfo af(*field);
       if (af.arr_ || (af.seq_ && af.is_new(anonymous_seq_generated))) {
@@ -424,7 +423,7 @@ void generate_anon_fields(AST_Structure* node)
         f.endArgs();
 
         AST_Type* elem;
-        if (af.seq_ != 0) {
+        if (af.seq_ != nullptr) {
           elem = af.seq_->base_type();
         } else {
           elem = af.arr_->base_type();
@@ -525,8 +524,8 @@ bool
 metaclass_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* name,
   AST_Type* type, const char*)
 {
-  AST_Array* arr = dynamic_cast<AST_Array*>(type);
-  AST_Sequence* seq = 0;
+  auto* arr = dynamic_cast<AST_Array*>(type);
+  AST_Sequence* seq = nullptr;
   if (!arr && !(seq = dynamic_cast<AST_Sequence*>(type))) {
     return true;
   }
@@ -545,7 +544,7 @@ metaclass_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* name,
   f.endArgs();
 
   AST_Type* elem;
-  if (seq != 0) {
+  if (seq != nullptr) {
     elem = seq->base_type();
   } else {
     elem = arr->base_type();

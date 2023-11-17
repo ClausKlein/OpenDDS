@@ -41,7 +41,7 @@ namespace {
   {
     const bool cxx11 = be_global->language_mapping() == BE_GlobalData::LANGMAP_CXX11;
     AST_Type* const t = resolveActualType(type);
-    AST_Type* const node_as_type = dynamic_cast<AST_Type*>(node);
+    auto* const node_as_type = dynamic_cast<AST_Type*>(node);
     switch (t->node_type()) {
     case AST_Decl::NT_pre_defined:
       if (set && cxx11 && node_as_type &&
@@ -122,7 +122,7 @@ namespace {
 
   void generate_dynamic_data_adapter_access_field(
     AST_Union* union_node, bool set,
-    OpenDDS::XTypes::MemberId field_id, AST_Type* field_type, AST_Field* field = 0)
+    OpenDDS::XTypes::MemberId field_id, AST_Type* field_type, AST_Field* field = nullptr)
   {
     const bool use_cxx11 = be_global->language_mapping() == BE_GlobalData::LANGMAP_CXX11;
     const bool disc = union_node && field_id == OpenDDS::XTypes::DISCRIMINATOR_ID;
@@ -186,10 +186,10 @@ namespace {
 
   bool generate_dynamic_data_adapter_access(AST_Decl* node, RefWrapper& wrapper, bool set)
   {
-    AST_Structure* struct_node = 0;
-    AST_Union* union_node = 0;
-    AST_Sequence* seq_node = 0;
-    AST_Array* array_node = 0;
+    AST_Structure* struct_node = nullptr;
+    AST_Union* union_node = nullptr;
+    AST_Sequence* seq_node = nullptr;
+    AST_Array* array_node = nullptr;
     if (!node) {
       return false;
     }
@@ -238,8 +238,7 @@ namespace {
       }
 
       const Fields fields(union_node ? union_node : struct_node);
-      for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-        AST_Field* const field = *i;
+      for (auto field : fields) {
         generate_dynamic_data_adapter_access_field(
           union_node, set, be_global->get_id(field), field->field_type(), field);
       }
@@ -332,12 +331,12 @@ namespace {
   }
 
   bool generate_dynamic_data_adapter(
-    AST_Decl* node, const std::string* use_scoped_name = 0, AST_Typedef* typedef_node = 0)
+    AST_Decl* node, const std::string* use_scoped_name = nullptr, AST_Typedef* typedef_node = nullptr)
   {
-    AST_Structure* struct_node = 0;
-    AST_Union* union_node = 0;
-    AST_Sequence* seq_node = 0;
-    AST_Array* array_node = 0;
+    AST_Structure* struct_node = nullptr;
+    AST_Union* union_node = nullptr;
+    AST_Sequence* seq_node = nullptr;
+    AST_Array* array_node = nullptr;
     if (!node) {
       return false;
     }
@@ -374,8 +373,7 @@ namespace {
     if (struct_node || union_node) {
       const Fields fields(union_node ? union_node : struct_node);
       FieldInfo::EleLenSet anonymous_seq_generated;
-      for (Fields::Iterator i = fields.begin(); i != fields.end(); ++i) {
-        AST_Field* const field = *i;
+      for (auto field : fields) {
         if (field->field_type()->anonymous()) {
           FieldInfo af(*field);
           if (af.arr_ || (af.seq_ && af.is_new(anonymous_seq_generated))) {
@@ -389,8 +387,8 @@ namespace {
     }
 
     std::vector<std::string> ns;
-    ns.push_back("OpenDDS");
-    ns.push_back("XTypes");
+    ns.emplace_back("OpenDDS");
+    ns.emplace_back("XTypes");
     NamespaceGuard ng(true, &ns);
 
     std::string tag;
@@ -456,7 +454,7 @@ namespace {
         }
 
         const bool is_topic_type = be_global->is_topic_type(node);
-        AST_Type* const node_as_type = dynamic_cast<AST_Type*>(node);
+        auto* const node_as_type = dynamic_cast<AST_Type*>(node);
         const bool forany = needs_forany(node_as_type);
         const bool distinct_type = needs_distinct_type(node_as_type);
         be_global->impl_ <<

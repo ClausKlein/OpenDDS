@@ -41,10 +41,10 @@
 
 using namespace std;
 
-BE_GlobalData* be_global = 0;
+BE_GlobalData* be_global = nullptr;
 
 BE_GlobalData::BE_GlobalData()
-  : filename_(0)
+  : filename_(nullptr)
   , java_(false)
   , suppress_idl_(false)
   , suppress_typecode_(false)
@@ -75,8 +75,7 @@ BE_GlobalData::BE_GlobalData()
 }
 
 BE_GlobalData::~BE_GlobalData()
-{
-}
+= default;
 
 void
 BE_GlobalData::destroy()
@@ -355,7 +354,7 @@ BE_GlobalData::parse_args(long& i, char** av)
 
   switch (av[i][1]) {
   case 'o':
-    if (av[++i] == 0) {
+    if (av[++i] == nullptr) {
       ACE_ERROR((LM_ERROR, ACE_TEXT("No argument for -o\n")));
       idl_global->parse_args_exit(1);
     } else {
@@ -438,7 +437,7 @@ BE_GlobalData::parse_args(long& i, char** av)
     } else if (!ACE_OS::strncasecmp(av[i], FILENAME_ONLY_INCLUDES_FLAG, FILENAME_ONLY_INCLUDES_FLAG_SIZE)) {
       filename_only_includes_ = true;
     } else if (!strcmp(av[i], "--default-extensibility")) {
-      if (av[++i] == 0) {
+      if (av[++i] == nullptr) {
         ACE_ERROR((LM_ERROR, ACE_TEXT("No argument for --default-extensibility\n")));
         idl_global->parse_args_exit(1);
       } else if (!strcmp(av[i], "final")) {
@@ -455,7 +454,7 @@ BE_GlobalData::parse_args(long& i, char** av)
     } else if (!strcmp(av[i], "--default-enum-extensibility-zero")) {
       default_enum_extensibility_zero_ = true;
     } else if (!strcmp(av[i], "--default-autoid")) {
-      if (av[++i] == 0) {
+      if (av[++i] == nullptr) {
         ACE_ERROR((LM_ERROR, ACE_TEXT("No argument for --default-autoid\n")));
         idl_global->parse_args_exit(1);
       } else if (!strcmp(av[i], "sequential")) {
@@ -468,7 +467,7 @@ BE_GlobalData::parse_args(long& i, char** av)
         idl_global->parse_args_exit(1);
       }
     } else if (!strcmp(av[i], "--default-try-construct")) {
-      if (av[++i] == 0) {
+      if (av[++i] == nullptr) {
         ACE_ERROR((LM_ERROR, ACE_TEXT("No argument for --default-try-construct\n")));
         idl_global->parse_args_exit(1);
       } else if (!strcmp(av[i], "discard")) {
@@ -516,7 +515,7 @@ BE_GlobalData::writeFile(const char* fileName, const string& content)
 //include file management (assumes a singleton BE_GlobalData object)
 
 namespace {
-  typedef set<pair<string, string> > Includes;
+  using Includes = set<pair<string, string>>;
   Includes all_includes[BE_GlobalData::STREAM_COUNT];
   set<string> referenced_idl, inc_path;
   vector<string> inc_path_vector;
@@ -526,8 +525,8 @@ void
 BE_GlobalData::reset_includes()
 {
   inc_path_vector.clear();
-  for (int i = 0; i < BE_GlobalData::STREAM_COUNT; ++i) {
-    all_includes[i].clear();
+  for (auto & all_include : all_includes) {
+    all_include.clear();
   }
 }
 
@@ -535,7 +534,7 @@ void
 BE_GlobalData::add_inc_path(const char* path)
 {
   if (inc_path.insert(path).second) {
-    inc_path_vector.push_back(path);
+    inc_path_vector.emplace_back(path);
   }
 }
 
@@ -723,7 +722,7 @@ bool BE_GlobalData::is_nested(AST_Decl* node)
 
 bool BE_GlobalData::is_default_nested(UTL_Scope* scope)
 {
-  AST_Decl* module = dynamic_cast<AST_Decl*>(scope);
+  auto* module = dynamic_cast<AST_Decl*>(scope);
   DefaultNestedAnnotation* default_nested = dynamic_cast<DefaultNestedAnnotation*>(
     builtin_annotations_["::@default_nested"]);
   if (module) {
@@ -856,7 +855,7 @@ AutoidKind BE_GlobalData::autoid(AST_Decl* node) const
 
 AutoidKind BE_GlobalData::scoped_autoid(UTL_Scope* scope) const
 {
-  AST_Decl* module = dynamic_cast<AST_Decl*>(scope);
+  auto* module = dynamic_cast<AST_Decl*>(scope);
   AutoidAnnotation* autoid_annotation = dynamic_cast<AutoidAnnotation*>(
     builtin_annotations_["::@autoid"]);
   if (module) {
@@ -934,9 +933,8 @@ bool BE_GlobalData::is_plain(AST_Decl* node) const
     dynamic_cast<TryConstructAnnotation*>(
       builtin_annotations_["::@try_construct"]);
 
-  for (AST_Annotation_Appls::iterator i = node->annotations().begin();
-       i != node->annotations().end(); ++i) {
-    AST_Annotation_Appl* appl = i->get();
+  for (auto & i : node->annotations()) {
+    AST_Annotation_Appl* appl = i.get();
     if (appl &&
         appl->annotation_decl() != external_annotation->declaration() &&
         appl->annotation_decl() != try_construct_annotation->declaration()) {
@@ -997,7 +995,7 @@ OpenDDS::DataRepresentation BE_GlobalData::data_representations(
 OpenDDS::XTypes::MemberId BE_GlobalData::compute_id(
   AST_Structure* stru, AST_Field* field, AutoidKind auto_id, OpenDDS::XTypes::MemberId& member_id)
 {
-  const MemberIdMap::const_iterator pos = member_id_map_.find(field);
+  const auto pos = member_id_map_.find(field);
   if (pos != member_id_map_.end()) {
     return pos->second;
   }
@@ -1021,12 +1019,12 @@ OpenDDS::XTypes::MemberId BE_GlobalData::compute_id(
   }
 
   // Check for collision with ids in the same type
-  GlobalMemberIdCollisionMap::iterator git = member_id_collision_map_.find(stru);
+  auto git = member_id_collision_map_.find(stru);
   if (git == member_id_collision_map_.end()) {
     git = member_id_collision_map_.insert(
       std::pair<AST_Structure*, MemberIdCollisionMap>(stru, MemberIdCollisionMap())).first;
   }
-  MemberIdCollisionMap::iterator lit = git->second.find(mid);
+  auto lit = git->second.find(mid);
   if (lit != git->second.end()) {
     std::ostringstream msg;
     msg << "Member id " << mid << " is the same as on field " << canonical_name(lit->second);
@@ -1046,7 +1044,7 @@ OpenDDS::XTypes::MemberId BE_GlobalData::compute_id(
 
 OpenDDS::XTypes::MemberId BE_GlobalData::get_id(AST_Field* field)
 {
-  const MemberIdMap::const_iterator pos = member_id_map_.find(field);
+  const auto pos = member_id_map_.find(field);
   if (pos != member_id_map_.end()) {
     return pos->second;
   }

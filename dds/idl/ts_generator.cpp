@@ -46,7 +46,7 @@ namespace {
     typedef std::map<std::string, std::string>::const_iterator mapiter_t;
     for (size_t i = s.find("<%"); i < s.length(); i = s.find("<%", i + 1)) {
       size_t n = s.find("%>", i) - i + 2;
-      mapiter_t iter = rep.find(s.substr(i + 2, n - 4));
+      auto iter = rep.find(s.substr(i + 2, n - 4));
       if (iter != rep.end()) {
         s.replace(i, n, iter->second);
       }
@@ -79,7 +79,7 @@ namespace {
   void gen_isDcpsKey(IDL_GlobalData::DCPS_Data_Type_Info* info)
   {
     IDL_GlobalData::DCPS_Key_List::CONST_ITERATOR i(info->key_list_);
-    for (ACE_TString* key = 0; i.next(key); i.advance()) {
+    for (ACE_TString* key = nullptr; i.next(key); i.advance()) {
       gen_isDcpsKey_i(ACE_TEXT_ALWAYS_CHAR(key->c_str()));
     }
   }
@@ -103,8 +103,8 @@ bool ts_generator::generate_ts(AST_Decl* node, UTL_ScopedName* name)
     return false;
   }
 
-  AST_Structure* struct_node = 0;
-  AST_Union* union_node = 0;
+  AST_Structure* struct_node = nullptr;
+  AST_Union* union_node = nullptr;
   AST_Type::SIZE_TYPE size_type;
   if (node->node_type() == AST_Decl::NT_struct) {
     struct_node = dynamic_cast<AST_Structure*>(node);
@@ -119,7 +119,7 @@ bool ts_generator::generate_ts(AST_Decl* node, UTL_ScopedName* name)
   }
 
   size_t key_count = 0;
-  IDL_GlobalData::DCPS_Data_Type_Info* info = 0;
+  IDL_GlobalData::DCPS_Data_Type_Info* info = nullptr;
   TopicKeys keys;
   if (struct_node) {
     info = idl_global->is_dcps_type(name);
@@ -516,9 +516,9 @@ bool ts_generator::gen_struct(AST_Structure* node, UTL_ScopedName* name,
 
       be_global->impl_ << "bool operator==(const " << nm << "& lhs, const " << nm << "& rhs)\n"
                        << "{\n";
-      for (size_t i = 0; i < fields.size(); ++i) {
-        const std::string field_name = fields[i]->local_name()->get_string();
-        AST_Type* field_type = resolveActualType(fields[i]->field_type());
+      for (auto field : fields) {
+        const std::string field_name = field->local_name()->get_string();
+        AST_Type* field_type = resolveActualType(field->field_type());
         const Classification cls = classify(field_type);
         if (cls & CL_ARRAY) {
           std::string indent("  ");

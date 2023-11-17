@@ -27,7 +27,7 @@ struct GeneratorBase;
 namespace {
   std::string string_ns = "::CORBA";
 
-  GeneratorBase* generator_ = 0;
+  GeneratorBase* generator_ = nullptr;
 
   std::map<AST_PredefinedType::PredefinedType, std::string> primtype_;
 
@@ -58,7 +58,7 @@ namespace {
 
   std::string array_dims(AST_Type* type, ACE_CDR::ULong& elems)
   {
-    AST_Array* const arr = dynamic_cast<AST_Array*>(type);
+    auto* const arr = dynamic_cast<AST_Array*>(type);
     std::string ret = array_zero_indices(arr);
     elems *= array_element_count(arr);
     AST_Type* base = resolveActualType(arr->base_type());
@@ -86,7 +86,7 @@ namespace {
 
 struct GeneratorBase
 {
-  virtual ~GeneratorBase() {}
+  virtual ~GeneratorBase() = default;
   virtual void init() = 0;
   virtual void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq) = 0;
   virtual bool gen_struct(AST_Structure* s, UTL_ScopedName* name, const std::vector<AST_Field*>& fields, AST_Type::SIZE_TYPE size, const char* x) = 0;
@@ -242,7 +242,7 @@ struct GeneratorBase
         break;
       case AST_Expression::EV_enum:
         {
-          AST_Enum* e = dynamic_cast<AST_Enum*>(the_union->disc_type());
+          auto* e = dynamic_cast<AST_Enum*>(the_union->disc_type());
           if (be_global->language_mapping() == BE_GlobalData::LANGMAP_CXX11 ||
               be_global->language_mapping() == BE_GlobalData::LANGMAP_FACE_CXX) {
             std::string prefix = scoped(e->name());
@@ -377,10 +377,7 @@ struct GeneratorBase
 
   static bool hasDefaultLabel (const std::vector<AST_UnionBranch*>& branches)
   {
-    for (std::vector<AST_UnionBranch*>::const_iterator pos = branches.begin(), limit = branches.end();
-         pos != limit;
-         ++pos) {
-      AST_UnionBranch* branch = *pos;
+    for (auto branch : branches) {
       for (unsigned long j = 0; j < branch->label_list_length(); ++j) {
         AST_UnionLabel* label = branch->label(j);
         if (label->label_kind() == AST_UnionLabel::UL_default) {
@@ -395,10 +392,8 @@ struct GeneratorBase
   {
     size_t count = 0;
 
-    for (std::vector<AST_UnionBranch*>::const_iterator pos = branches.begin(), limit = branches.end();
-         pos != limit;
-         ++pos) {
-      count += (*pos)->label_list_length();
+    for (auto branche : branches) {
+      count += branche->label_list_length();
     }
 
     return count;
@@ -893,7 +888,7 @@ struct GeneratorBase
 
 struct FaceGenerator : GeneratorBase
 {
-  virtual void init()
+  void init() override
   {
     be_global->add_include("FACE/types.hpp", BE_GlobalData::STREAM_LANG_H);
     be_global->add_include("FACE/StringManager.h", BE_GlobalData::STREAM_LANG_H);
@@ -932,7 +927,7 @@ struct FaceGenerator : GeneratorBase
     helpers_[HLP_FIXED_CONSTANT] = "::OpenDDS::FaceTypes::Fixed";
   }
 
-  void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq)
+  void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq) override
   {
     be_global->add_include("<tao/Seq_Out_T.h>", BE_GlobalData::STREAM_LANG_H);
     be_global->add_include("FACE/Sequence.h", BE_GlobalData::STREAM_LANG_H);
@@ -1017,7 +1012,7 @@ struct FaceGenerator : GeneratorBase
   bool gen_struct(AST_Structure*, UTL_ScopedName* name,
                   const std::vector<AST_Field*>& fields,
                   AST_Type::SIZE_TYPE size,
-                  const char*)
+                  const char*) override
   {
     const ScopedNamespaceGuard namespaces(name, be_global->lang_header_);
     const char* const nm = name->last_component()->get_string();
@@ -1029,9 +1024,9 @@ struct FaceGenerator : GeneratorBase
       "  typedef " << nm << "_var _var_type;\n"
       "  typedef " << nm << "_out _out_type;\n\n";
 
-    for (size_t i = 0; i < fields.size(); ++i) {
-      AST_Type* field_type = fields[i]->field_type();
-      const std::string field_name = fields[i]->local_name()->get_string();
+    for (auto field : fields) {
+      AST_Type* field_type = field->field_type();
+      const std::string field_name = field->local_name()->get_string();
       std::string type_name = map_type(field_type);
 
       const Classification cls = classify(field_type);
@@ -1066,9 +1061,9 @@ struct FaceGenerator : GeneratorBase
       be_global->impl_ <<
         "bool " << nm << "::operator==(const " << nm << "& rhs) const\n"
         "{\n";
-      for (size_t i = 0; i < fields.size(); ++i) {
-        const std::string field_name = fields[i]->local_name()->get_string();
-        AST_Type* field_type = resolveActualType(fields[i]->field_type());
+      for (auto field : fields) {
+        const std::string field_name = field->local_name()->get_string();
+        AST_Type* field_type = resolveActualType(field->field_type());
         const Classification cls = classify(field_type);
         if (cls & CL_ARRAY) {
           std::string indent("  ");
@@ -1093,9 +1088,9 @@ struct FaceGenerator : GeneratorBase
           "void swap(" << nm << "& lhs, " << nm << "& rhs)\n"
           "{\n"
           "  using std::swap;\n";
-        for (size_t i = 0; i < fields.size(); ++i) {
-          const std::string fn = fields[i]->local_name()->get_string();
-          AST_Type* field_type = resolveActualType(fields[i]->field_type());
+        for (auto field : fields) {
+          const std::string fn = field->local_name()->get_string();
+          AST_Type* field_type = resolveActualType(field->field_type());
           const Classification cls = classify(field_type);
           if (cls & CL_ARRAY) {
             ACE_CDR::ULong elems = 1;
@@ -1128,7 +1123,7 @@ FaceGenerator FaceGenerator::instance;
 
 struct SafetyProfileGenerator : GeneratorBase
 {
-  virtual void init()
+  void init() override
   {
     be_global->add_include("tao/String_Manager_T.h", BE_GlobalData::STREAM_LANG_H);
     be_global->add_include("tao/CORBA_String.h", BE_GlobalData::STREAM_LANG_H);
@@ -1169,7 +1164,7 @@ struct SafetyProfileGenerator : GeneratorBase
     helpers_[HLP_ARR_FORANY] = "::TAO_Array_Forany_T";
   }
 
-  virtual void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq)
+  void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq) override
   {
     be_global->add_include("<tao/Seq_Out_T.h>", BE_GlobalData::STREAM_LANG_H);
     be_global->add_include("dds/DCPS/SafetyProfileSequence.h", BE_GlobalData::STREAM_LANG_H);
@@ -1253,7 +1248,7 @@ struct SafetyProfileGenerator : GeneratorBase
   bool gen_struct(AST_Structure*, UTL_ScopedName* name,
                   const std::vector<AST_Field*>& fields,
                   AST_Type::SIZE_TYPE size,
-                  const char*)
+                  const char*) override
   {
     const ScopedNamespaceGuard namespaces(name, be_global->lang_header_);
     const char* const nm = name->last_component()->get_string();
@@ -1265,9 +1260,9 @@ struct SafetyProfileGenerator : GeneratorBase
       "  typedef " << nm << "_var _var_type;\n"
       "  typedef " << nm << "_out _out_type;\n\n";
 
-    for (size_t i = 0; i < fields.size(); ++i) {
-      AST_Type* field_type = fields[i]->field_type();
-      const std::string field_name = fields[i]->local_name()->get_string();
+    for (auto field : fields) {
+      AST_Type* field_type = field->field_type();
+      const std::string field_name = field->local_name()->get_string();
       std::string type_name = map_type(field_type);
       const Classification cls = classify(field_type);
       if (cls & CL_STRING) {
@@ -1301,9 +1296,9 @@ struct SafetyProfileGenerator : GeneratorBase
       be_global->impl_ <<
         "bool " << nm << "::operator==(const " << nm << "& rhs) const\n"
         "{\n";
-      for (size_t i = 0; i < fields.size(); ++i) {
-        const std::string field_name = fields[i]->local_name()->get_string();
-        AST_Type* field_type = resolveActualType(fields[i]->field_type());
+      for (auto field : fields) {
+        const std::string field_name = field->local_name()->get_string();
+        AST_Type* field_type = resolveActualType(field->field_type());
         const Classification cls = classify(field_type);
         if (cls & CL_ARRAY) {
           std::string indent("  ");
@@ -1328,9 +1323,9 @@ struct SafetyProfileGenerator : GeneratorBase
           "void swap(" << nm << "& lhs, " << nm << "& rhs)\n"
           "{\n"
           "  using std::swap;\n";
-        for (size_t i = 0; i < fields.size(); ++i) {
-          const std::string fn = fields[i]->local_name()->get_string();
-          AST_Type* field_type = resolveActualType(fields[i]->field_type());
+        for (auto field : fields) {
+          const std::string fn = field->local_name()->get_string();
+          AST_Type* field_type = resolveActualType(field->field_type());
           const Classification cls = classify(field_type);
           if (cls & CL_ARRAY) {
             ACE_CDR::ULong elems = 1;
@@ -1363,7 +1358,7 @@ SafetyProfileGenerator SafetyProfileGenerator::instance;
 
 struct Cxx11Generator : GeneratorBase
 {
-  void init()
+  void init() override
   {
     be_global->add_include("<cstdint>", BE_GlobalData::STREAM_LANG_H);
     be_global->add_include("<string>", BE_GlobalData::STREAM_LANG_H);
@@ -1415,12 +1410,12 @@ struct Cxx11Generator : GeneratorBase
     }
   }
 
-  std::string map_type_string(AST_PredefinedType::PredefinedType chartype, bool)
+  std::string map_type_string(AST_PredefinedType::PredefinedType chartype, bool) override
   {
     return chartype == AST_PredefinedType::PT_char ? "std::string" : "std::wstring";
   }
 
-  std::string const_keyword(AST_Expression::ExprType type)
+  std::string const_keyword(AST_Expression::ExprType type) override
   {
     switch (type) {
     case AST_Expression::EV_string:
@@ -1431,10 +1426,10 @@ struct Cxx11Generator : GeneratorBase
     }
   }
 
-  void gen_simple_out(const char*) {}
+  void gen_simple_out(const char*) override {}
 
-  bool scoped_enum() { return true; }
-  std::string enum_base() { return " : uint32_t"; }
+  bool scoped_enum() override { return true; }
+  std::string enum_base() override { return " : uint32_t"; }
 
   void gen_union_pragma_pre()
   {
@@ -1455,7 +1450,7 @@ struct Cxx11Generator : GeneratorBase
       "#endif\n\n";
   }
 
-  void struct_decls(UTL_ScopedName* name, AST_Type::SIZE_TYPE, const char*)
+  void struct_decls(UTL_ScopedName* name, AST_Type::SIZE_TYPE, const char*) override
   {
     be_global->lang_header_ <<
       "class " << name->last_component()->get_string() << ";\n";
@@ -1473,14 +1468,14 @@ struct Cxx11Generator : GeneratorBase
     be_global->lang_header_ << ind << "using " << type << " = " << array << elem << bounds.str() << ";\n";
   }
 
-  void gen_array(UTL_ScopedName* tdname, AST_Array* arr)
+  void gen_array(UTL_ScopedName* tdname, AST_Array* arr) override
   {
     gen_array(arr, tdname->last_component()->get_string(), map_type(arr->base_type()));
   }
 
-  void gen_array_traits(UTL_ScopedName*, AST_Array*) {}
-  void gen_array_typedef(const char*, AST_Type*) {}
-  void gen_typedef_varout(const char*, AST_Type*) {}
+  void gen_array_traits(UTL_ScopedName*, AST_Array*) override {}
+  void gen_array_typedef(const char*, AST_Type*) override {}
+  void gen_typedef_varout(const char*, AST_Type*) override {}
 
   static void gen_sequence(const std::string& type, const std::string& elem,  const std::string& ind = "")
   {
@@ -1488,7 +1483,7 @@ struct Cxx11Generator : GeneratorBase
     be_global->lang_header_ << ind << "using " << type << " = std::vector<" << elem << ">;\n";
   }
 
-  void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq)
+  void gen_sequence(UTL_ScopedName* tdname, AST_Sequence* seq) override
   {
     gen_sequence(tdname->last_component()->get_string(), map_type(seq->base_type()));
   }
@@ -1534,7 +1529,7 @@ struct Cxx11Generator : GeneratorBase
         "  " << lang_field_type << ' ' << af.name_ << "() const " << ret <<
         "  " << lang_field_type << "& " << af.name_ << "() " << ret;
       if (af.cls_ & CL_ENUM) {
-        AST_Enum* enu = dynamic_cast<AST_Enum*>(af.act_);
+        auto* enu = dynamic_cast<AST_Enum*>(af.act_);
         for (UTL_ScopeActiveIterator it(enu, UTL_Scope::IK_decls); !it.is_done(); it.next()) {
           if (it.item()->node_type() == AST_Decl::NT_enum_val) {
             initializer = '{' + generator_->map_type(af.type_)
@@ -1562,7 +1557,7 @@ struct Cxx11Generator : GeneratorBase
 
   bool gen_struct(AST_Structure*, UTL_ScopedName* name,
                   const std::vector<AST_Field*>& fields,
-                  AST_Type::SIZE_TYPE, const char*)
+                  AST_Type::SIZE_TYPE, const char*) override
   {
     const ScopedNamespaceGuard namespaces(name, be_global->lang_header_);
     const ScopedNamespaceGuard namespaces2(name, be_global->impl_);
@@ -1602,9 +1597,9 @@ struct Cxx11Generator : GeneratorBase
       be_global->impl_ <<
         "bool " << nm << "::operator==(const " << nm << "& rhs) const\n"
         "{\n";
-      for (size_t i = 0; i < fields.size(); ++i) {
-        const std::string field_name = fields[i]->local_name()->get_string();
-        AST_Type* field_type = resolveActualType(fields[i]->field_type());
+      for (auto field : fields) {
+        const std::string field_name = field->local_name()->get_string();
+        AST_Type* field_type = resolveActualType(field->field_type());
         const Classification cls = classify(field_type);
         if (cls & CL_ARRAY) {
           std::string indent("  ");
@@ -1654,7 +1649,7 @@ struct Cxx11Generator : GeneratorBase
     const char* nm = branch->local_name()->get_string();
 
     AST_UnionLabel* label = branch->label(0);
-    AST_Union* union_ = dynamic_cast<AST_Union*>(branch->defined_in());
+    auto* union_ = dynamic_cast<AST_Union*>(branch->defined_in());
     AST_Type* dtype = resolveActualType(union_->disc_type());
     const std::string disc_type = generator_->map_type(dtype);
 
@@ -1759,7 +1754,7 @@ struct Cxx11Generator : GeneratorBase
   }
 
   bool gen_union(AST_Union* u, UTL_ScopedName* name,
-                 const std::vector<AST_UnionBranch*>& branches, AST_Type* discriminator)
+                 const std::vector<AST_UnionBranch*>& branches, AST_Type* discriminator) override
   {
     const ScopedNamespaceGuard namespaces(name, be_global->lang_header_);
     const char* const nm = name->last_component()->get_string();
@@ -1987,7 +1982,7 @@ namespace {
 bool langmap_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* name, AST_Type* base,
                                     const char*)
 {
-  AST_Array* arr = 0;
+  AST_Array* arr = nullptr;
   {
     const ScopedNamespaceGuard namespaces(name, be_global->lang_header_);
     const char* const nm = name->last_component()->get_string();

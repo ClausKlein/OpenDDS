@@ -53,7 +53,7 @@ public:
   class Error : public std::exception {
   public:
     Error();
-    Error(AST_Decl* node, const std::string& message);
+    Error(AST_Decl* node, std::string  message);
     virtual ~Error() throw ();
 
     Error& operator=(const Error& error);

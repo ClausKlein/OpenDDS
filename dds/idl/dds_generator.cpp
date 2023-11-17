@@ -12,7 +12,7 @@
 using namespace std;
 using namespace AstTypeClassification;
 
-dds_generator::~dds_generator() {}
+dds_generator::~dds_generator() = default;
 
 namespace {
   const std::string cxx_escape = "_cxx_";
@@ -30,8 +30,7 @@ std::string dds_generator::valid_var_name(const std::string& str)
   const std::string invalid_chars("<>()[]*.: ");
   std::string s;
   char last_char = '\0';
-  for (size_t i = 0; i < str.size(); ++i) {
-    const char c = str[i];
+  for (char c : str) {
     if (invalid_chars.find(c) == std::string::npos) {
       s.push_back(c);
       last_char = c;
@@ -131,27 +130,24 @@ string dds_generator::module_scope_helper(UTL_ScopedName* sn, const char* sep, E
 
 void composite_generator::gen_prologue()
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    (*it)->gen_prologue();
+  for (auto & component : components_) {
+    component->gen_prologue();
   }
 }
 
 void composite_generator::gen_epilogue()
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    (*it)->gen_epilogue();
+  for (auto & component : components_) {
+    component->gen_epilogue();
   }
 }
 
 bool composite_generator::gen_const(UTL_ScopedName* name, bool nestedInInteface,
   AST_Constant* constant)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!constant->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_const(name, nestedInInteface, constant))
+  for (auto & component : components_) {
+    if (!constant->imported() || component->do_included_files())
+      if (!component->gen_const(name, nestedInInteface, constant))
         return false;
   }
 
@@ -161,10 +157,9 @@ bool composite_generator::gen_const(UTL_ScopedName* name, bool nestedInInteface,
 bool composite_generator::gen_enum(AST_Enum* node, UTL_ScopedName* name,
   const std::vector<AST_EnumVal*>& contents, const char* repoid)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!node->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_enum(node, name, contents, repoid))
+  for (auto & component : components_) {
+    if (!node->imported() || component->do_included_files())
+      if (!component->gen_enum(node, name, contents, repoid))
         return false;
   }
 
@@ -175,10 +170,9 @@ bool composite_generator::gen_struct(AST_Structure* node, UTL_ScopedName* name,
   const vector<AST_Field*>& fields, AST_Type::SIZE_TYPE size,
   const char* repoid)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!node->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_struct(node, name, fields, size, repoid))
+  for (auto & component : components_) {
+    if (!node->imported() || component->do_included_files())
+      if (!component->gen_struct(node, name, fields, size, repoid))
         return false;
   }
 
@@ -188,9 +182,8 @@ bool composite_generator::gen_struct(AST_Structure* node, UTL_ScopedName* name,
 bool composite_generator::gen_struct_fwd(UTL_ScopedName* name,
   AST_Type::SIZE_TYPE size)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!(*it)->gen_struct_fwd(name, size))
+  for (auto & component : components_) {
+    if (!component->gen_struct_fwd(name, size))
       return false;
   }
 
@@ -200,10 +193,9 @@ bool composite_generator::gen_struct_fwd(UTL_ScopedName* name,
 bool composite_generator::gen_typedef(AST_Typedef* node, UTL_ScopedName* name, AST_Type* base,
                                       const char* repoid)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!node->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_typedef(node, name, base, repoid))
+  for (auto & component : components_) {
+    if (!node->imported() || component->do_included_files())
+      if (!component->gen_typedef(node, name, base, repoid))
         return false;
   }
 
@@ -216,10 +208,9 @@ bool composite_generator::gen_interf(AST_Interface* node, UTL_ScopedName* name, 
   const std::vector<AST_Attribute*>& attrs,
   const std::vector<AST_Operation*>& ops, const char* repoid)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!node->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_interf(node, name, local, inherits, inh_flat,
+  for (auto & component : components_) {
+    if (!node->imported() || component->do_included_files())
+      if (!component->gen_interf(node, name, local, inherits, inh_flat,
                              attrs, ops, repoid))
       return false;
   }
@@ -229,9 +220,8 @@ bool composite_generator::gen_interf(AST_Interface* node, UTL_ScopedName* name, 
 
 bool composite_generator::gen_interf_fwd(UTL_ScopedName* name)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!(*it)->gen_interf_fwd(name))
+  for (auto & component : components_) {
+    if (!component->gen_interf_fwd(name))
       return false;
   }
 
@@ -240,10 +230,9 @@ bool composite_generator::gen_interf_fwd(UTL_ScopedName* name)
 
 bool composite_generator::gen_native(AST_Native* node, UTL_ScopedName* name, const char* repoid)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!node->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_native(node, name, repoid))
+  for (auto & component : components_) {
+    if (!node->imported() || component->do_included_files())
+      if (!component->gen_native(node, name, repoid))
         return false;
   }
 
@@ -256,10 +245,9 @@ bool composite_generator::gen_union(AST_Union* node,
                                     AST_Type* discriminator,
                                     const char* repoid)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!node->imported() || (*it)->do_included_files())
-      if (!(*it)->gen_union(node, name, branches, discriminator, repoid))
+  for (auto & component : components_) {
+    if (!node->imported() || component->do_included_files())
+      if (!component->gen_union(node, name, branches, discriminator, repoid))
         return false;
   }
 
@@ -269,9 +257,8 @@ bool composite_generator::gen_union(AST_Union* node,
 bool composite_generator::gen_union_fwd(AST_UnionFwd* uf, UTL_ScopedName* name,
   AST_Type::SIZE_TYPE size)
 {
-  for (vector<dds_generator*>::iterator it(components_.begin());
-       it != components_.end(); ++it) {
-    if (!(*it)->gen_union_fwd(uf, name, size))
+  for (auto & component : components_) {
+    if (!component->gen_union_fwd(uf, name, size))
       return false;
   }
 
@@ -377,9 +364,9 @@ string type_to_default(const std::string& indent, AST_Type* type, const string& 
   } else if (fld_cls & CL_ENUM) {
     // For now, simply return the first value of the enumeration.
     // Must be changed, if support for @default_literal is desired.
-    AST_Enum* enu = dynamic_cast<AST_Enum*>(actual_type);
+    auto* enu = dynamic_cast<AST_Enum*>(actual_type);
     UTL_ScopeActiveIterator i(enu, UTL_Scope::IK_decls);
-    AST_EnumVal *item = dynamic_cast<AST_EnumVal*>(i.item());
+    auto *item = dynamic_cast<AST_EnumVal*>(i.item());
     if (use_cxx11) {
       def_val = scoped(type->name()) + "::" + item->local_name()->get_string();
     } else {
@@ -397,7 +384,7 @@ string type_to_default(const std::string& indent, AST_Type* type, const string& 
     def_val = (fld_cls & CL_WIDE) ? "L\"\"" : "\"\"";
     if (!use_cxx11 && (fld_cls & CL_WIDE)) def_val = "TAO::WString_Manager::s_traits::default_initializer()";
   } else if (fld_cls & (CL_PRIMITIVE | CL_FIXED)) {
-    AST_PredefinedType* pt = dynamic_cast<AST_PredefinedType*>(actual_type);
+    auto* pt = dynamic_cast<AST_PredefinedType*>(actual_type);
     if (pt && (pt->pt() == AST_PredefinedType::PT_longdouble)) {
       if (use_cxx11) {
         def_val = "0.0L";

@@ -140,12 +140,12 @@ namespace {
 
     const Classification c = classify(actual);
     if (c & CL_SEQUENCE) {
-      AST_Sequence* const sequence = dynamic_cast<AST_Sequence*>(actual);
+      auto* const sequence = dynamic_cast<AST_Sequence*>(actual);
       sequence_helper(expression + accessor, sequence, idx, level);
       return;
 
     } else if (c & CL_ARRAY) {
-      AST_Array* const array = dynamic_cast<AST_Array*>(actual);
+      auto* const array = dynamic_cast<AST_Array*>(actual);
       array_helper(expression + accessor, array, 0, idx, level);
       return;
     }
@@ -305,9 +305,7 @@ bool value_reader_generator::gen_struct(AST_Structure*,
       "  while (value_reader.begin_struct_member(member_id, helper)) {\n"
       "    switch (member_id) {\n";
 
-    for (std::vector<AST_Field*>::const_iterator pos = fields.begin(), limit = fields.end();
-         pos != limit; ++pos) {
-      AST_Field* const field = *pos;
+    for (auto field : fields) {
       const std::string field_name = field->local_name()->get_string();
       be_global->impl_ <<
         "    case " << be_global->get_id(field) << ": {\n";

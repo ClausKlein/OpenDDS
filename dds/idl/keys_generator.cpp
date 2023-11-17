@@ -15,12 +15,11 @@
 using std::string;
 
 struct KeyLessThanWrapper {
-  size_t n_;
+  size_t n_{0};
   const string cxx_name_;
 
   explicit KeyLessThanWrapper(UTL_ScopedName* name)
-    : n_(0)
-    , cxx_name_(scoped(name))
+    : cxx_name_(scoped(name))
   {
     be_global->header_ << be_global->versioning_begin() << "\n";
 
@@ -120,7 +119,7 @@ bool keys_generator::gen_struct(AST_Structure* node, UTL_ScopedName* name,
         }
       } else if (info) {
         IDL_GlobalData::DCPS_Data_Type_Info_Iter iter(info->key_list_);
-        for (ACE_TString* kp = 0; iter.next(kp) != 0; iter.advance()) {
+        for (ACE_TString* kp = nullptr; iter.next(kp) != 0; iter.advance()) {
           string fname = ACE_TEXT_ALWAYS_CHAR(kp->c_str());
           if (use_cxx11) {
             fname = insert_cxx11_accessor_parens(fname, false);

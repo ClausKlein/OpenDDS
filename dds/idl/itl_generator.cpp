@@ -52,7 +52,7 @@ std::ostream&
 operator<<(std::ostream& out,
            const InlineType& it)
 {
-  AST_Typedef* td = dynamic_cast<AST_Typedef*>(it.type);
+  auto* td = dynamic_cast<AST_Typedef*>(it.type);
   if (td) {
     be_global->itl_ << '"' << it.type->repoID() << '"';
     return out;
@@ -62,49 +62,49 @@ operator<<(std::ostream& out,
   if (c & CL_STRING) {
     // TODO:  Support bounded strings.
     if (c & CL_WIDE) {
-      be_global->itl_ << "{ \"kind\" : \"string\", \"note\" : { \"idl\" : { \"type\" : \"wstring\" } } }";
+      be_global->itl_ << R"({ "kind" : "string", "note" : { "idl" : { "type" : "wstring" } } })";
     }
     else {
-      be_global->itl_ << "{ \"kind\" : \"string\" }";
+      be_global->itl_ << R"({ "kind" : "string" })";
     }
   }
   else if (c & CL_PRIMITIVE) {
     switch (dynamic_cast<AST_PredefinedType*>(it.type)->pt()) {
     case AST_PredefinedType::PT_long:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 32 }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 32 })";
       break;
     case AST_PredefinedType::PT_ulong:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 32, \"unsigned\" : true}";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 32, "unsigned" : true})";
       break;
     case AST_PredefinedType::PT_longlong:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 64 }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 64 })";
       break;
     case AST_PredefinedType::PT_ulonglong:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 64, \"unsigned\" : true}";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 64, "unsigned" : true})";
       break;
     case AST_PredefinedType::PT_short:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 16 }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 16 })";
       break;
     case AST_PredefinedType::PT_ushort:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 16, \"unsigned\" : true}";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 16, "unsigned" : true})";
       break;
     case AST_PredefinedType::PT_float:
-      be_global->itl_ << "{ \"kind\" : \"float\", \"model\" : \"binary32\" }";
+      be_global->itl_ << R"({ "kind" : "float", "model" : "binary32" })";
       break;
     case AST_PredefinedType::PT_double:
-      be_global->itl_ << "{ \"kind\" : \"float\", \"model\" : \"binary64\" }";
+      be_global->itl_ << R"({ "kind" : "float", "model" : "binary64" })";
       break;
     case AST_PredefinedType::PT_longdouble:
-      be_global->itl_ << "{ \"kind\" : \"float\", \"model\" : \"binary128\" }";
+      be_global->itl_ << R"({ "kind" : "float", "model" : "binary128" })";
       break;
     case AST_PredefinedType::PT_char:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 8, \"note\" : { \"presentation\" : { \"type\" : \"char\" } } }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 8, "note" : { "presentation" : { "type" : "char" } } })";
       break;
     case AST_PredefinedType::PT_wchar:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"note\" : { \"presentation\" : { \"type\" : \"char\" }, \"idl\" : { \"type\" : \"wchar\" } } }";
+      be_global->itl_ << R"({ "kind" : "int", "note" : { "presentation" : { "type" : "char" }, "idl" : { "type" : "wchar" } } })";
       break;
     case AST_PredefinedType::PT_boolean:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 1, \"note\" : { \"presentation\" : { \"type\" : \"bool\" } } }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 1, "note" : { "presentation" : { "type" : "bool" } } })";
       break;
     case AST_PredefinedType::PT_octet:
       be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 8, \"unsigned\" : true, "
@@ -112,10 +112,10 @@ operator<<(std::ostream& out,
       break;
 #if OPENDDS_HAS_EXPLICIT_INTS
     case AST_PredefinedType::PT_uint8:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 8, \"unsigned\" : true }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 8, "unsigned" : true })";
       break;
     case AST_PredefinedType::PT_int8:
-      be_global->itl_ << "{ \"kind\" : \"int\", \"bits\" : 8 }";
+      be_global->itl_ << R"({ "kind" : "int", "bits" : 8 })";
       break;
 #endif
     case AST_PredefinedType::PT_any:
@@ -168,7 +168,7 @@ bool itl_generator::gen_enum(AST_Enum*, UTL_ScopedName* /*name*/,
                   << Indent(this) << "{\n"
                   << Open(this)
                   << Indent(this) << "\"kind\" : \"alias\",\n"
-                  << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+                  << Indent(this) << R"("name" : ")" << repoid << "\",\n"
                   << Indent(this) << "\"type\" :\n"
                   << Open(this)
                   << Indent(this) << "{\n"
@@ -208,12 +208,12 @@ bool itl_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* /*name*/,
   switch (base->node_type()) {
   case AST_Decl::NT_sequence:
     {
-      AST_Sequence *seq = dynamic_cast<AST_Sequence*>(base);
+      auto *seq = dynamic_cast<AST_Sequence*>(base);
       be_global->itl_ << Open(this)
                       << Indent(this) << "{\n"
                       << Open(this)
                       << Indent(this) << "\"kind\" : \"alias\",\n"
-                      << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+                      << Indent(this) << R"("name" : ")" << repoid << "\",\n"
                       << Indent(this) << "\"type\" :\n"
                       << Open(this)
                       << Indent(this) << "{\n"
@@ -233,12 +233,12 @@ bool itl_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* /*name*/,
     }
   case AST_Decl::NT_array:
     {
-      AST_Array* arr = dynamic_cast<AST_Array*>(base);
+      auto* arr = dynamic_cast<AST_Array*>(base);
       be_global->itl_ << Open(this)
                       << Indent(this) << "{\n"
                       << Open(this)
                       << Indent(this) << "\"kind\" : \"alias\",\n"
-                      << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+                      << Indent(this) << R"("name" : ")" << repoid << "\",\n"
                       << Indent(this) << "\"type\" :\n"
                       << Open(this)
                       << Indent(this) << "{\n"
@@ -263,15 +263,15 @@ bool itl_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* /*name*/,
     }
   case AST_Decl::NT_fixed:
     {
-      AST_Fixed* fixed = dynamic_cast<AST_Fixed*>(base);
+      auto* fixed = dynamic_cast<AST_Fixed*>(base);
       unsigned digits = fixed->digits()->ev()->u.ulval;
       unsigned scale = fixed->scale()->ev()->u.ulval;
       be_global->itl_
         << Open(this) << Indent(this) << "{\n" << Open(this)
         << Indent(this) << "\"kind\" : \"alias\",\n"
-        << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+        << Indent(this) << R"("name" : ")" << repoid << "\",\n"
         << Indent(this) << "\"type\" : { "
-          << "\"kind\" : \"fixed\", "
+          << R"("kind" : "fixed", )"
           << "\"digits\" : " << digits << ", "
           << "\"scale\" : " << scale << ", "
           << "\"base\" : 10 }\n"
@@ -284,7 +284,7 @@ bool itl_generator::gen_typedef(AST_Typedef*, UTL_ScopedName* /*name*/,
                       << Indent(this) << "{\n"
                       << Open(this)
                       << Indent(this) << "\"kind\" : \"alias\",\n"
-                      << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+                      << Indent(this) << R"("name" : ")" << repoid << "\",\n"
                       << Indent(this) << "\"type\" : " << InlineType(base) << "\n"
                       << Close(this)
                       << Indent(this) << "}\n"
@@ -312,10 +312,10 @@ bool itl_generator::gen_struct(AST_Structure* node, UTL_ScopedName*,
                   << Indent(this) << "{\n"
                   << Open(this)
                   << Indent(this) << "\"kind\" : \"alias\",\n"
-                  << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+                  << Indent(this) << R"("name" : ")" << repoid << "\",\n"
 
   // Check if this is defined as a primary data type
-                  << Indent(this) << "\"note\" : { \"is_dcps_data_type\" : "
+                  << Indent(this) << R"("note" : { "is_dcps_data_type" : )"
                   << (is_topic_type ? "true" : "false")
                   << " },\n"
 
@@ -329,17 +329,14 @@ bool itl_generator::gen_struct(AST_Structure* node, UTL_ScopedName*,
                   << Indent(this) << "[\n";
 
   bool comma_flag = false;
-  for (std::vector<AST_Field*>::const_iterator pos = fields.begin(), limit = fields.end();
-       pos != limit;
-       ++pos) {
-    AST_Field* field = *pos;
+  for (auto field : fields) {
     if (comma_flag) {
       be_global->itl_ << Indent(this) << ",\n";
     }
     be_global->itl_ << Open(this)
                     << Indent(this) << "{\n"
                     << Open(this)
-                    << Indent(this) << "\"name\" : \"" << field->local_name()->get_string() << "\",\n"
+                    << Indent(this) << R"("name" : ")" << field->local_name()->get_string() << "\",\n"
                     << Indent(this) << "\"type\" : " << InlineType(field->field_type()) << "\n"
                     << Close(this)
                     << Indent(this) << "}\n"
@@ -372,21 +369,21 @@ bool itl_generator::gen_union(AST_Union* node, UTL_ScopedName* /*name*/,
                   << Indent(this) << "{\n"
                   << Open(this)
                   << Indent(this) << "\"kind\" : \"alias\",\n"
-                  << Indent(this) << "\"name\" : \"" << repoid << "\",\n"
+                  << Indent(this) << R"("name" : ")" << repoid << "\",\n"
                   << Indent(this) << "\"type\" :\n"
                   << Open(this)
                   << Indent(this) << "{\n"
                   << Open(this)
                   << Indent(this) << "\"kind\" : \"union\",\n"
                   << Indent(this) << "\"discriminator\" : " << InlineType(_d) << ",\n"
-                  << Indent(this) << "\"note\" : { \"is_dcps_data_type\" : "
+                  << Indent(this) << R"("note" : { "is_dcps_data_type" : )"
                   << (be_global->is_topic_type(node) ? "true" : "false")
                   << " },\n"
                   << Indent(this) << "\"fields\" :\n"
                   << Open(this)
                   << Indent(this) << "[\n";
 
-  for (std::vector<AST_UnionBranch*>::const_iterator pos = cases.begin(), limit = cases.end();
+  for (auto pos = cases.begin(), limit = cases.end();
        pos != limit;
        ++pos) {
     if (pos != cases.begin())
@@ -397,7 +394,7 @@ bool itl_generator::gen_union(AST_Union* node, UTL_ScopedName* /*name*/,
     be_global->itl_ << Open(this)
                     << Indent(this) << "{\n"
                     << Open(this)
-                    << Indent(this) << "\"name\" : \"" << branch->local_name()->get_string() << "\",\n"
+                    << Indent(this) << R"("name" : ")" << branch->local_name()->get_string() << "\",\n"
                     << Indent(this) << "\"type\" : " << InlineType(branch->field_type()) << ",\n"
 
                     << Indent(this) << "\"labels\" : [";

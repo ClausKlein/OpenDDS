@@ -78,7 +78,7 @@ MulticastSession::send_control(char submessage_id, Message_Block_Ptr data)
 {
   DataSampleHeader header;
   Message_Block_Ptr control(
-    this->link_->create_control(submessage_id, header, move(data)));
+    this->link_->create_control(submessage_id, header, std::move(data)));
   if (!control) {
     ACE_ERROR((LM_ERROR,
                ACE_TEXT("(%P|%t) ERROR: ")
@@ -87,7 +87,7 @@ MulticastSession::send_control(char submessage_id, Message_Block_Ptr data)
     return;
   }
 
-  int error = this->link_->send_control(header, move(control));
+  int error = this->link_->send_control(header, std::move(control));
   if (error != SEND_CONTROL_OK) {
     ACE_ERROR((LM_ERROR,
                ACE_TEXT("(%P|%t) ERROR: ")
@@ -233,7 +233,7 @@ MulticastSession::send_syn(const GUID_t& local_writer,
            2);
 
   // Send control sample to remote peer:
-  send_control(MULTICAST_SYN, move(data));
+  send_control(MULTICAST_SYN, std::move(data));
 }
 
 void
@@ -309,7 +309,7 @@ MulticastSession::send_synack(const GUID_t& local_reader,
                       this->active_ ? 1 : 0), 2);
 
   // Send control sample to remote peer:
-  send_control(MULTICAST_SYNACK, move(data));
+  send_control(MULTICAST_SYNACK, std::move(data));
 
   // Send naks before sending synack to
   // reduce wait time for resends from remote.

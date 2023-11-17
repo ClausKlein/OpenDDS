@@ -148,12 +148,12 @@ namespace {
 
     const Classification c = classify(actual);
     if (c & CL_SEQUENCE) {
-      AST_Sequence* const sequence = dynamic_cast<AST_Sequence*>(actual);
+      auto* const sequence = dynamic_cast<AST_Sequence*>(actual);
       sequence_helper(expression, sequence, idx, level);
       return;
 
     } else if (c & CL_ARRAY) {
-      AST_Array* const array = dynamic_cast<AST_Array*>(actual);
+      auto* const array = dynamic_cast<AST_Array*>(actual);
       array_helper(expression, array, 0, idx, level);
       return;
     }
@@ -218,9 +218,7 @@ bool value_writer_generator::gen_enum(AST_Enum*,
 
     be_global->impl_ <<
       "  switch (value) {\n";
-    for (std::vector<AST_EnumVal*>::const_iterator pos = contents.begin(), limit = contents.end();
-         pos != limit; ++pos) {
-      AST_EnumVal* const val = *pos;
+    for (auto val : contents) {
       const std::string value_name = (use_cxx11 ? (type_name + "::") : module_scope(name))
         + val->local_name()->get_string();
       be_global->impl_ <<
@@ -264,9 +262,7 @@ bool value_writer_generator::gen_struct(AST_Structure*,
 
     be_global->impl_ <<
       "  value_writer.begin_struct();\n";
-    for (std::vector<AST_Field*>::const_iterator pos = fields.begin(), limit = fields.end();
-         pos != limit; ++pos) {
-      AST_Field* const field = *pos;
+    for (auto field : fields) {
       const std::string field_name = field->local_name()->get_string();
       const std::string idl_name = canonical_name(field);
       be_global->impl_ <<

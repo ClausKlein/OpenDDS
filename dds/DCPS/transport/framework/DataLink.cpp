@@ -671,7 +671,7 @@ DataLink::send_control(const DataSampleHeader& header, Message_Block_Ptr message
 
   TransportSendControlElement* const elem = new TransportSendControlElement(1, // initial_count
                                        GUID_UNKNOWN, &send_response_listener_,
-                                       header, move(message));
+                                       header, std::move(message));
 
   send_response_listener_.track_message();
 

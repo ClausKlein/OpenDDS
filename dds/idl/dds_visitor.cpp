@@ -98,8 +98,7 @@ dds_visitor::dds_visitor(AST_Decl* scope, bool java_ts_only)
 }
 
 dds_visitor::~dds_visitor()
-{
-}
+= default;
 
 //visit_* functions
 
@@ -124,12 +123,12 @@ dds_visitor::visit_scope(UTL_Scope* node)
 {
   if (node->nmembers() > 0) {
     UTL_ScopeActiveIterator si(node, UTL_Scope::IK_decls);
-    AST_Decl* d = 0;
+    AST_Decl* d = nullptr;
 
     while (!si.is_done()) {
       d = si.item();
 
-      if (d == 0) {
+      if (d == nullptr) {
         ACE_ERROR_RETURN((LM_ERROR,
                           ACE_TEXT("(%N:%l) dds_visitor::visit_")
                           ACE_TEXT("scope - bad node in this scope\n")), -1);
@@ -257,7 +256,7 @@ dds_visitor::visit_structure(AST_Structure* node)
       }
 
       IDL_GlobalData::DCPS_Data_Type_Info_Iter iter(info->key_list_);
-      for (ACE_TString* kp = 0; iter.next(kp) != 0; iter.advance()) {
+      for (ACE_TString* kp = nullptr; iter.next(kp) != 0; iter.advance()) {
         dcps_data_type_keys.insert(ACE_TEXT_ALWAYS_CHAR(kp->c_str()));
       }
 
@@ -267,28 +266,26 @@ dds_visitor::visit_structure(AST_Structure* node)
           "  both a DCPS_DATA_TYPE pragma and the annotation-based system.";
 
         bool header = false;
-        for (set<string>::iterator i = topic_type_keys.begin();
-            i != topic_type_keys.end(); ++i) {
-          if (dcps_data_type_keys.find(*i) == dcps_data_type_keys.end()) {
+        for (const auto & topic_type_key : topic_type_keys) {
+          if (dcps_data_type_keys.find(topic_type_key) == dcps_data_type_keys.end()) {
             if (!header) {
               message += "\n\n"
                 "  The following keys were declared using @key, but not DCPS_DATA_KEY:";
               header = true;
             }
-            message += "\n    " + *i;
+            message += "\n    " + topic_type_key;
           }
         }
 
         header = false;
-        for (set<string>::iterator i = dcps_data_type_keys.begin();
-            i != dcps_data_type_keys.end(); ++i) {
-          if (topic_type_keys.find(*i) == topic_type_keys.end()) {
+        for (const auto & dcps_data_type_key : dcps_data_type_keys) {
+          if (topic_type_keys.find(dcps_data_type_key) == topic_type_keys.end()) {
             if (!header) {
               message += "\n\n"
                 "  The following keys were declared using DCPS_DATA_KEY, but not @key:";
               header = true;
             }
-            message += "\n    " + *i;
+            message += "\n    " + dcps_data_type_key;
           }
         }
 
@@ -450,7 +447,7 @@ dds_visitor::visit_union(AST_Union* node)
   const Fields fields(node);
   const Fields::Iterator fields_end = fields.end();
   for (Fields::Iterator i = fields.begin(); i != fields_end; ++i) {
-    AST_UnionBranch* ub = dynamic_cast<AST_UnionBranch*>(*i);
+    auto* ub = dynamic_cast<AST_UnionBranch*>(*i);
     if (!ub) {
       idl_global->err()->misc_error("expected union to only contain UnionBranches", ub);
       error_ = true;

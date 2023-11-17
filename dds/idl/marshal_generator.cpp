@@ -22,6 +22,7 @@
 #include <iostream>
 #include <cctype>
 #include <map>
+#include <vector>
 
 #define OPENDDS_IDL_STR(X) #X
 
@@ -33,16 +34,13 @@ using namespace OpenDDS::DCPS;
 namespace {
   const string RtpsNamespace = " ::OpenDDS::RTPS::", DdsNamespace = " ::DDS::";
 
-  typedef bool (*gen_special_case)(const string& cxx);
-  typedef std::map<std::string, gen_special_case> SpecialCases;
+  using gen_special_case = bool (*)(const string &);
+  using SpecialCases = std::map<std::string, gen_special_case>;
   SpecialCases special_struct_cases;
   SpecialCases special_seq_cases;
 
-  typedef bool (*gen_special_union)(const string& cxx,
-                                    AST_Union* u,
-                                    AST_Type* discriminator,
-                                    const std::vector<AST_UnionBranch*>& branches);
-  typedef std::map<std::string, gen_special_union> SpecialUnionCases;
+  using gen_special_union = bool (*)(const string &, AST_Union *, AST_Type *, const std::vector<AST_UnionBranch *> &);
+  using SpecialUnionCases = std::map<std::string, gen_special_union>;
   SpecialUnionCases special_union_cases;
 
   bool genRtpsSpecialSequence(const string& cxx);
@@ -89,7 +87,7 @@ namespace {
     }
 
     init_special_cases();
-    SpecialCases::iterator it = special_seq_cases.find(template_name);
+    auto it = special_seq_cases.find(template_name);
     if (it == special_seq_cases.end()) {
       be_util::misc_error_and_abort(
         std::string("Invalid special case sequence template name \"") +
@@ -109,7 +107,7 @@ namespace {
     }
 
     init_special_cases();
-    SpecialCases::iterator it = special_struct_cases.find(template_name);
+    auto it = special_struct_cases.find(template_name);
     if (it == special_struct_cases.end()) {
       be_util::misc_error_and_abort(
         std::string("Invalid special case struct template name \"") +
@@ -130,7 +128,7 @@ namespace {
     }
 
     init_special_cases();
-    SpecialUnionCases::iterator it = special_union_cases.find(template_name);
+    auto it = special_union_cases.find(template_name);
     if (it == special_union_cases.end()) {
       be_util::misc_error_and_abort(
         std::string("Invalid special case struct template name \"") +
@@ -202,7 +200,7 @@ namespace {
     if (type->node_type() != AST_Decl::NT_pre_defined) {
       return "";
     }
-    AST_PredefinedType* pt = dynamic_cast<AST_PredefinedType*>(type);
+    auto* pt = dynamic_cast<AST_PredefinedType*>(type);
     const string first_args = encoding_expr + ", " + size_expr;
     switch (pt->pt()) {
     case AST_PredefinedType::PT_octet:
@@ -482,8 +480,8 @@ namespace {
   }
 
   void gen_sequence_i(
-    UTL_ScopedName* tdname, AST_Sequence* seq, bool nested_key_only, AST_Typedef* typedef_node = 0,
-    const FieldInfo* anonymous = 0)
+    UTL_ScopedName* tdname, AST_Sequence* seq, bool nested_key_only, AST_Typedef* typedef_node = nullptr,
+    const FieldInfo* anonymous = nullptr)
   {
     be_global->add_include("dds/DCPS/Util.h");
     be_global->add_include("dds/DCPS/Serializer.h");
@@ -638,7 +636,7 @@ namespace {
       }
 
       if (elem_cls & CL_PRIMITIVE) {
-        AST_PredefinedType* predef = dynamic_cast<AST_PredefinedType*>(elem);
+        auto* predef = dynamic_cast<AST_PredefinedType*>(elem);
         if (use_cxx11 && predef->pt() == AST_PredefinedType::PT_boolean) {
           be_global->impl_ <<
             "  for (CORBA::ULong i = 0; i < length; ++i) {\n" <<
@@ -716,7 +714,7 @@ namespace {
           "  }\n";
       }
 
-      AST_PredefinedType* predef = dynamic_cast<AST_PredefinedType*>(elem);
+      auto* predef = dynamic_cast<AST_PredefinedType*>(elem);
       string bound;
       if (!seq->unbounded()) {
         bound = use_cxx11 ? bounded_arg(seq) : value_access + ".maximum()";
@@ -903,14 +901,14 @@ namespace {
 
   void gen_anonymous_sequence(const FieldInfo& sf)
   {
-    gen_sequence_i(0, 0, false, 0, &sf);
+    gen_sequence_i(nullptr, nullptr, false, nullptr, &sf);
     if (needs_nested_key_only(sf.type_)) {
-      gen_sequence_i(0, 0, true, 0, &sf);
+      gen_sequence_i(nullptr, nullptr, true, nullptr, &sf);
     }
   }
 
   void gen_array_i(
-    UTL_ScopedName* name, AST_Array* arr, bool nested_key_only, const FieldInfo* anonymous = 0)
+    UTL_ScopedName* name, AST_Array* arr, bool nested_key_only, const FieldInfo* anonymous = nullptr)
   {
     be_global->add_include("dds/DCPS/Serializer.h");
     if (anonymous) {
@@ -1086,7 +1084,7 @@ namespace {
             stream = "(strm >> " + classic_array_wrapper.ref() + ")";
           } else {
             stream = streamCommon(
-              indent, 0, "", arr->base_type(), ">> " + elem_access, nested_key_only, intro);
+              indent, nullptr, "", arr->base_type(), ">> " + elem_access, nested_key_only, intro);
           }
           intro.join(be_global->impl_, indent);
           be_global->impl_ <<
@@ -1157,9 +1155,9 @@ namespace {
 
   void gen_anonymous_array(const FieldInfo& af)
   {
-    gen_array_i(0, 0, false, &af);
+    gen_array_i(nullptr, nullptr, false, &af);
     if (needs_nested_key_only(af.type_)) {
-      gen_array_i(0, 0, true, &af);
+      gen_array_i(nullptr, nullptr, true, &af);
     }
   }
 
@@ -1198,19 +1196,19 @@ namespace {
           // The requested key field matches this one.  We do not allow
           // arrays (must be indexed specifically) or structs (must
           // identify specific sub-fields).
-          AST_Structure* sub_struct = dynamic_cast<AST_Structure*>(field_type);
-          if (sub_struct != 0) {
+          auto* sub_struct = dynamic_cast<AST_Structure*>(field_type);
+          if (sub_struct != nullptr) {
             throw string("Structs not allowed as keys");
           }
-          AST_Array* array_node = dynamic_cast<AST_Array*>(field_type);
-          if (array_node != 0) {
+          auto* array_node = dynamic_cast<AST_Array*>(field_type);
+          if (array_node != nullptr) {
             throw string("Arrays not allowed as keys");
           }
           return field_type;
         } else if (is_array) {
           // must be a typedef of an array
-          AST_Array* array_node = dynamic_cast<AST_Array*>(field_type);
-          if (array_node == 0) {
+          auto* array_node = dynamic_cast<AST_Array*>(field_type);
+          if (array_node == nullptr) {
             throw string("Indexing for non-array type");
           }
           if (array_node->n_dims() > 1) {
@@ -1232,8 +1230,8 @@ namespace {
         }
 
         // nested structures
-        AST_Structure* sub_struct = dynamic_cast<AST_Structure*>(field_type);
-        if (sub_struct == 0) {
+        auto* sub_struct = dynamic_cast<AST_Structure*>(field_type);
+        if (sub_struct == nullptr) {
           throw string("Expected structure field for ") + key_base;
         }
 
@@ -1254,7 +1252,7 @@ namespace {
         "Invalid key specification for " + struct_name + " (" + key + "): " + error,
         struct_node);
     }
-    return 0;
+    return nullptr;
   }
 
   bool is_bounded_type(AST_Type* type, Encoding::Kind encoding)
@@ -1262,9 +1260,9 @@ namespace {
     bool bounded = true;
     static std::vector<AST_Type*> type_stack;
     type = resolveActualType(type);
-    for (size_t i = 0; i < type_stack.size(); ++i) {
+    for (auto & i : type_stack) {
       // If we encounter the same type recursively, then we are unbounded
-      if (type == type_stack[i]) return false;
+      if (type == i) return false;
     }
     type_stack.push_back(type);
     Classification fld_cls = classify(type);
@@ -1290,13 +1288,13 @@ namespace {
       }
     } else if (fld_cls & CL_SEQUENCE) {
       if (fld_cls & CL_BOUNDED) {
-        AST_Sequence* seq_node = dynamic_cast<AST_Sequence*>(type);
+        auto* seq_node = dynamic_cast<AST_Sequence*>(type);
         if (!is_bounded_type(seq_node->base_type(), encoding)) bounded = false;
       } else {
         bounded = false;
       }
     } else if (fld_cls & CL_ARRAY) {
-      AST_Array* array_node = dynamic_cast<AST_Array*>(type);
+      auto* array_node = dynamic_cast<AST_Array*>(type);
       if (!is_bounded_type(array_node->base_type(), encoding)) bounded = false;
     } else if (fld_cls & CL_UNION) {
       const ExtensibilityKind exten = be_global->extensibility(type);
@@ -1327,9 +1325,9 @@ namespace {
     static std::vector<AST_Type*> type_stack;
 
     type = resolveActualType(type);
-    for (size_t i = 0; i < type_stack.size(); ++i) {
+    for (auto & i : type_stack) {
       // If we encounter the same type recursively, then it has already been considered
-      if (type == type_stack[i]) return extensibilitykind_final;
+      if (type == i) return extensibilitykind_final;
     }
     type_stack.push_back(type);
 
@@ -1441,7 +1439,7 @@ namespace {
     const ExtensibilityKind exten = be_global->extensibility(type);
     switch (type->node_type()) {
     case AST_Decl::NT_pre_defined: {
-      AST_PredefinedType* p = dynamic_cast<AST_PredefinedType*>(type);
+      auto* p = dynamic_cast<AST_PredefinedType*>(type);
       switch (p->pt()) {
       case AST_PredefinedType::PT_char:
       case AST_PredefinedType::PT_boolean:
@@ -1489,7 +1487,7 @@ namespace {
       break;
     case AST_Decl::NT_string:
     case AST_Decl::NT_wstring: {
-      AST_String* string_node = dynamic_cast<AST_String*>(type);
+      auto* string_node = dynamic_cast<AST_String*>(type);
       align(encoding, size, 4);
       size += 4;
       const int width = (string_node->width() == 1) ? 1 : 2 /*UTF-16*/;
@@ -1510,7 +1508,7 @@ namespace {
       break;
     }
     case AST_Decl::NT_sequence: {
-      AST_Sequence* seq_node = dynamic_cast<AST_Sequence*>(type);
+      auto* seq_node = dynamic_cast<AST_Sequence*>(type);
       AST_Type* base_node = seq_node->base_type();
       idl_max_serialized_size_dheader(encoding, exten, size);
       size_t bound = seq_node->max_size()->ev()->u.ulval;
@@ -1520,7 +1518,7 @@ namespace {
       break;
     }
     case AST_Decl::NT_array: {
-      AST_Array* array_node = dynamic_cast<AST_Array*>(type);
+      auto* array_node = dynamic_cast<AST_Array*>(type);
       AST_Type* base_node = array_node->base_type();
       idl_max_serialized_size_dheader(encoding, exten, size);
       idl_max_serialized_size_repeating(
@@ -1528,7 +1526,7 @@ namespace {
       break;
     }
     case AST_Decl::NT_union: {
-      AST_Union* union_node = dynamic_cast<AST_Union*>(type);
+      auto* union_node = dynamic_cast<AST_Union*>(type);
       idl_max_serialized_size_dheader(encoding, exten, size);
       // TODO(iguessthislldo) Handle Parameter List
       idl_max_serialized_size(encoding, size, union_node->disc_type());
@@ -1595,7 +1593,7 @@ namespace {
         + ((fld_cls & CL_WIDE) ? " * char16_cdr_size;\n"
                                : " + 1;\n");
     } else if (fld_cls & CL_PRIMITIVE) {
-      AST_PredefinedType* const p = dynamic_cast<AST_PredefinedType*>(actual_type);
+      auto* const p = dynamic_cast<AST_PredefinedType*>(actual_type);
       if (p->pt() == AST_PredefinedType::PT_longdouble) {
         // special case use to ACE's NONNATIVE_LONGDOUBLE in CDR_Base.h
         return indent +
@@ -1949,19 +1947,19 @@ namespace {
       }
     }
 
-    string getConditional(const string& field_name) const
+    [[nodiscard]] string getConditional(const string& field_name) const
     {
       if (cst_.empty()) {
         return "";
       }
-      std::map<string, string>::const_iterator it = cst_.find(field_name);
+      auto it = cst_.find(field_name);
       if (it != cst_.end()) {
         return it->second;
       }
       return "";
     }
 
-    string preFieldRead(const string& field_name) const
+    [[nodiscard]] string preFieldRead(const string& field_name) const
     {
       if (cst_.empty() || field_name != "inlineQos" || iQosOffset_.empty()) {
         return "";
@@ -1975,12 +1973,7 @@ namespace {
     Intro intro_;
   };
 
-  typedef void (*KeyIterationFn)(
-    const std::string& indent,
-    Encoding::Kind encoding,
-    const string& key_name, AST_Type* ast_type,
-    size_t* size,
-    string* expr, Intro* intro);
+  using KeyIterationFn = void (*)(const std::string &, Encoding::Kind, const string &, AST_Type *, size_t *, string *, Intro *);
 
   bool
   iterate_over_keys(
@@ -2001,7 +1994,7 @@ namespace {
         AST_Type* straight_ast_type = i.get_ast_type();
         AST_Type* ast_type;
         if (i.root_type() == TopicKeys::UnionType) {
-          AST_Union* union_type = dynamic_cast<AST_Union*>(straight_ast_type);
+          auto* union_type = dynamic_cast<AST_Union*>(straight_ast_type);
           if (!union_type) {
             std::cerr << "ERROR: Invalid key iterator for: " << struct_name;
             return false;
@@ -2018,7 +2011,7 @@ namespace {
 
     if (info) {
       IDL_GlobalData::DCPS_Data_Type_Info_Iter iter(info->key_list_);
-      for (ACE_TString* kp = 0; iter.next(kp) != 0; iter.advance()) {
+      for (ACE_TString* kp = nullptr; iter.next(kp) != 0; iter.advance()) {
         const string key_name = ACE_TEXT_ALWAYS_CHAR(kp->c_str());
         fn(indent, encoding, key_name, find_type(node, key_name), size, expr, intro);
       }
@@ -2039,7 +2032,7 @@ namespace {
     const std::string& indent, Encoding::Kind, const string& key_name, AST_Type* ast_type,
     size_t*, string* expr, Intro* intro)
   {
-    *expr += findSizeCommon(indent, 0, key_name, ast_type, "stru.value", false, *intro);
+    *expr += findSizeCommon(indent, nullptr, key_name, ast_type, "stru.value", false, *intro);
   }
 
   std::string fill_datareprseq(
@@ -2049,16 +2042,16 @@ namespace {
   {
     std::vector<std::string> values;
     if (repr.xcdr1) {
-      values.push_back("DDS::XCDR_DATA_REPRESENTATION");
+      values.emplace_back("DDS::XCDR_DATA_REPRESENTATION");
     }
     if (repr.xcdr2) {
-      values.push_back("DDS::XCDR2_DATA_REPRESENTATION");
+      values.emplace_back("DDS::XCDR2_DATA_REPRESENTATION");
     }
     if (repr.xml) {
-      values.push_back("DDS::XML_DATA_REPRESENTATION");
+      values.emplace_back("DDS::XML_DATA_REPRESENTATION");
     }
     if (repr.unaligned) {
-      values.push_back("OpenDDS::DCPS::UNALIGNED_CDR_DATA_REPRESENTATION");
+      values.emplace_back("OpenDDS::DCPS::UNALIGNED_CDR_DATA_REPRESENTATION");
     }
 
     std::ostringstream ss;
@@ -2070,7 +2063,7 @@ namespace {
   }
 
   bool is_bounded_topic_struct(AST_Type* type, Encoding::Kind encoding, bool key_only,
-    TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info = 0)
+    TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info = nullptr)
   {
     /*
      * TODO(iguessthislldo): This is a workaround for not properly implementing
@@ -2085,8 +2078,8 @@ namespace {
     if (key_only) {
       if (info) {
         IDL_GlobalData::DCPS_Data_Type_Info_Iter iter(info->key_list_);
-        AST_Structure* const struct_type = dynamic_cast<AST_Structure*>(type);
-        for (ACE_TString* kp = 0; iter.next(kp) != 0; iter.advance()) {
+        auto* const struct_type = dynamic_cast<AST_Structure*>(type);
+        for (ACE_TString* kp = nullptr; iter.next(kp) != 0; iter.advance()) {
           const string key_name = ACE_TEXT_ALWAYS_CHAR(kp->c_str());
           AST_Type* const field_type = find_type(struct_type, key_name);
           if (!is_bounded_type(field_type, encoding)) {
@@ -2113,7 +2106,7 @@ namespace {
     TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info, bool key_only)
   {
     const char* function_prefix = key_only ? "key_only_" : "";
-    AST_Type* const type_node = dynamic_cast<AST_Type*>(node);
+    auto* const type_node = dynamic_cast<AST_Type*>(node);
     const Fields fields(node);
     const Fields::Iterator fields_end = fields.end();
     const std::string name = scoped(node->name());
@@ -2125,7 +2118,7 @@ namespace {
       "  {\n"
       "    switch (encoding.kind()) {\n";
     for (unsigned e = 0; e <= Encoding::KIND_UNALIGNED_CDR; ++e) {
-      const Encoding::Kind encoding = static_cast<Encoding::Kind>(e);
+      const auto encoding = static_cast<Encoding::Kind>(e);
       be_global->header_ <<
         "    case " << encoding_to_encoding_kind(encoding) << ":\n"
         "      return SerializedSizeBound(";
@@ -2134,7 +2127,7 @@ namespace {
         if (key_only) {
           idl_max_serialized_size_dheader(encoding, exten, size);
           if (!iterate_over_keys("", encoding, node, name, info, &keys,
-                idl_max_serialized_size_iteration, &size, 0, 0)) {
+                idl_max_serialized_size_iteration, &size, nullptr, nullptr)) {
             return false;
           }
         } else {
@@ -2158,7 +2151,7 @@ namespace {
   }
 
   bool generate_marshal_traits_struct(AST_Structure* node,
-    TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info = 0)
+    TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info = nullptr)
   {
     return
       generate_marshal_traits_struct_bounds_functions(node, keys, info, false) && // All Fields
@@ -2172,7 +2165,7 @@ namespace {
       "  {\n"
       "    switch (encoding.kind()) {\n";
     for (unsigned e = 0; e <= Encoding::KIND_UNALIGNED_CDR; ++e) {
-      const Encoding::Kind encoding = static_cast<Encoding::Kind>(e);
+      const auto encoding = static_cast<Encoding::Kind>(e);
       be_global->header_ <<
         "    case " << encoding_to_encoding_kind(encoding) << ":\n"
         "      return SerializedSizeBound(";
@@ -2196,7 +2189,7 @@ namespace {
       "  {\n"
       "    switch (encoding.kind()) {\n";
     for (unsigned e = 0; e <= Encoding::KIND_UNALIGNED_CDR; ++e) {
-      const Encoding::Kind encoding = static_cast<Encoding::Kind>(e);
+      const auto encoding = static_cast<Encoding::Kind>(e);
       be_global->header_ <<
         "    case " << encoding_to_encoding_kind(encoding) << ":\n"
         "      return SerializedSizeBound(";
@@ -2226,12 +2219,12 @@ namespace {
 
   bool generate_marshal_traits(
     AST_Decl* node, const std::string& cxx, ExtensibilityKind exten,
-    TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info = 0)
+    TopicKeys& keys, IDL_GlobalData::DCPS_Data_Type_Info* info = nullptr)
   {
     AST_Structure* const struct_node =
-      node->node_type() == AST_Decl::NT_struct ? dynamic_cast<AST_Structure*>(node) : 0;
+      node->node_type() == AST_Decl::NT_struct ? dynamic_cast<AST_Structure*>(node) : nullptr;
     AST_Union* const union_node =
-      node->node_type() == AST_Decl::NT_union ? dynamic_cast<AST_Union*>(node) : 0;
+      node->node_type() == AST_Decl::NT_union ? dynamic_cast<AST_Union*>(node) : nullptr;
     if (!struct_node && !union_node) {
       idl_global->err()->misc_error("Can't generate MarshalTraits for this node", node);
       return false;
@@ -2243,10 +2236,10 @@ namespace {
       AST_Type* const type = resolveActualType(field->field_type());
       const Classification fld_cls = classify(type);
       if (fld_cls & CL_SEQUENCE) {
-        AST_Sequence* const seq = dynamic_cast<AST_Sequence*>(type);
+        auto* const seq = dynamic_cast<AST_Sequence*>(type);
         AST_Type* const base = resolveActualType(seq->base_type());
         if (classify(base) & CL_PRIMITIVE) {
-          AST_PredefinedType* const pt = dynamic_cast<AST_PredefinedType*>(base);
+          auto* const pt = dynamic_cast<AST_PredefinedType*>(base);
           if (pt->pt() == AST_PredefinedType::PT_octet) {
             octetSeqOnly = field->local_name()->get_string();
           }
@@ -2837,8 +2830,7 @@ bool marshal_generator::gen_struct(AST_Structure* node,
     set_default.endArgs();
     std::ostringstream contents;
     Intro intro;
-    for (size_t i = 0; i < fields.size(); ++i) {
-      AST_Field* const field = fields[i];
+    for (auto field : fields) {
       AST_Type* const type = field->field_type();
       string field_name = string("stru.") + field->local_name()->get_string();
       if (use_cxx11) {
@@ -2856,9 +2848,9 @@ bool marshal_generator::gen_struct(AST_Structure* node,
   }
 
   FieldInfo::EleLenSet anonymous_seq_generated;
-  for (size_t i = 0; i < fields.size(); ++i) {
-    if (fields[i]->field_type()->anonymous()) {
-      FieldInfo af(*fields[i]);
+  for (auto field : fields) {
+    if (field->field_type()->anonymous()) {
+      FieldInfo af(*field);
       if (af.arr_) {
         gen_anonymous_array(af);
       } else if (af.seq_ && af.is_new(anonymous_seq_generated)) {
@@ -2877,7 +2869,7 @@ bool marshal_generator::gen_struct(AST_Structure* node,
   TopicKeys keys;
   if (is_topic_type) {
     keys = TopicKeys(node);
-    info = 0; // Annotations Override DCPS_DATA_TYPE
+    info = nullptr; // Annotations Override DCPS_DATA_TYPE
 
     if (!generate_struct_serialization_functions(node, FieldFilter_KeyOnly)) {
       return false;
@@ -2903,9 +2895,9 @@ bool marshal_generator::gen_struct(AST_Structure* node,
       for (unsigned e = 0; e <= Encoding::KIND_UNALIGNED_CDR; ++e) {
         string expr;
         Intro intro;
-        const Encoding::Kind encoding = static_cast<Encoding::Kind>(e);
-        if (!iterate_over_keys(indent, encoding, node, cxx, info, 0,
-              serialized_size_iteration, 0, &expr, &intro)) {
+        const auto encoding = static_cast<Encoding::Kind>(e);
+        if (!iterate_over_keys(indent, encoding, node, cxx, info, nullptr,
+              serialized_size_iteration, nullptr, &expr, &intro)) {
           return false;
         }
         be_global->impl_ <<
@@ -2933,7 +2925,7 @@ bool marshal_generator::gen_struct(AST_Structure* node,
       const char* indent = "  ";
 
       IDL_GlobalData::DCPS_Data_Type_Info_Iter iter(info->key_list_);
-      for (ACE_TString* kp = 0; iter.next(kp) != 0; iter.advance()) {
+      for (ACE_TString* kp = nullptr; iter.next(kp) != 0; iter.advance()) {
         const string key_name = ACE_TEXT_ALWAYS_CHAR(kp->c_str());
         AST_Type* const field_type = find_type(node, key_name);
         if (first) {
@@ -2941,7 +2933,7 @@ bool marshal_generator::gen_struct(AST_Structure* node,
         } else {
           expr += "\n    && ";
         }
-        expr += streamCommon(indent, 0, key_name, field_type, "<< stru.value", false, intro);
+        expr += streamCommon(indent, nullptr, key_name, field_type, "<< stru.value", false, intro);
       }
 
       intro.join(be_global->impl_, indent);
@@ -2960,7 +2952,7 @@ bool marshal_generator::gen_struct(AST_Structure* node,
       const std::string indent = "  ";
 
       IDL_GlobalData::DCPS_Data_Type_Info_Iter iter(info->key_list_);
-      for (ACE_TString* kp = 0; iter.next(kp) != 0; iter.advance()) {
+      for (ACE_TString* kp = nullptr; iter.next(kp) != 0; iter.advance()) {
         const string key_name = ACE_TEXT_ALWAYS_CHAR(kp->c_str());
         AST_Type* const field_type = find_type(node, key_name);
         if (first) {
@@ -2968,7 +2960,7 @@ bool marshal_generator::gen_struct(AST_Structure* node,
         } else {
           expr += "\n    && ";
         }
-        expr += streamCommon(indent, 0, key_name, field_type, ">> stru.value", false, intro);
+        expr += streamCommon(indent, nullptr, key_name, field_type, ">> stru.value", false, intro);
       }
 
       intro.join(be_global->impl_, indent);
@@ -3498,9 +3490,9 @@ bool marshal_generator::gen_union(AST_Union* node, UTL_ScopedName* name,
   Classification disc_cls = classify(discriminator);
 
   FieldInfo::EleLenSet anonymous_seq_generated;
-  for (size_t i = 0; i < branches.size(); ++i) {
-    if (branches[i]->field_type()->anonymous()) {
-      FieldInfo af(*branches[i]);
+  for (auto branche : branches) {
+    if (branche->field_type()->anonymous()) {
+      FieldInfo af(*branche);
       if (af.arr_) {
         gen_anonymous_array(af);
       } else if (af.seq_ && af.is_new(anonymous_seq_generated)) {
@@ -3529,16 +3521,16 @@ bool marshal_generator::gen_union(AST_Union* node, UTL_ScopedName* name,
     // Determine the default enum value
     ACE_CDR::ULong default_enum_val = 0;
     if (disc_cls & CL_ENUM) {
-      AST_Enum* enu = dynamic_cast<AST_Enum*>(disc_type);
+      auto* enu = dynamic_cast<AST_Enum*>(disc_type);
       UTL_ScopeActiveIterator i(enu, UTL_Scope::IK_decls);
-      AST_EnumVal *item = dynamic_cast<AST_EnumVal*>(i.item());
+      auto *item = dynamic_cast<AST_EnumVal*>(i.item());
       default_enum_val = item->constant_value()->ev()->u.eval;
     }
 
     // Search the union branches to find the default value according to
     // Table 9 of the XTypes spec v1.3
     bool found = false;
-    for (std::vector<AST_UnionBranch*>::const_iterator itr = branches.begin(); itr < branches.end() && !found; ++itr) {
+    for (auto itr = branches.begin(); itr < branches.end() && !found; ++itr) {
       AST_UnionBranch* branch = *itr;
       for (unsigned i = 0; i < branch->label_list_length(); ++i) {
         AST_UnionLabel* ul = branch->label(i);
@@ -3661,7 +3653,7 @@ bool marshal_generator::gen_union(AST_Union* node, UTL_ScopedName* name,
     if (generateSwitchForUnion(node, "uni._d()", streamCommon, branches,
                                discriminator, "return", "<< ", cxx.c_str(),
                                false, true, true,
-                               exten == extensibilitykind_mutable ? findSizeCommon : 0)) {
+                               exten == extensibilitykind_mutable ? findSizeCommon : nullptr)) {
       be_global->impl_ <<
         "  return true;\n";
     }
